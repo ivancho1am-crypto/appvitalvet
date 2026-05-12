@@ -1,0 +1,16 @@
+{
+  "name": "vitalvet-app",
+  "version": "1.0.0",
+  "description": "Panel administrativo VitalVet — Clínica Veterinaria Barbosa, Santander",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

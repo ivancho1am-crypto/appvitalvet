@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VitalVet — Panel Admin</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/styles.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+<body>
+
+<!-- ═══ LOGIN ═══ -->
+<div id="login-screen">
+  <div class="lc">
+    <div class="lc-logo">
+      <div class="lc-icon">🐾</div>
+      <h1>Vital<span>Vet</span></h1>
+      <p>Panel Administrativo · Barbosa, Santander</p>
+    </div>
+    <label class="lf-lbl">Usuario</label>
+    <input class="lf-in" id="lu" type="text" placeholder="admin@vitalvet.com" value="admin@vitalvet.com">
+    <label class="lf-lbl">Contraseña</label>
+    <input class="lf-in" id="lp" type="password" placeholder="••••••••" value="vitalvet2024">
+    <button class="lf-btn" onclick="doLogin()">Ingresar al panel →</button>
+    <p class="lf-hint">admin@vitalvet.com · vitalvet2024</p>
+  </div>
+</div>
+
+<!-- ═══ APP ═══ -->
+<div id="app">
+
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <div class="tb-brand">
+      <div class="tb-logo">🐾</div>
+      <div>
+        <div class="tb-name">Vital<span>Vet</span></div>
+      </div>
+    </div>
+    <div class="tb-right">
+      <span class="tb-badge" id="seg-badge">🏥 0 en seguimiento</span>
+      <div class="tb-user">
+        <div class="tb-av">ID</div>
+        <span class="tb-uname">Iván Durán</span>
+      </div>
+      <button class="tb-logout" onclick="doLogout()">Salir</button>
+    </div>
+  </div>
+
+  <!-- TABS NAV -->
+  <div class="tabs-nav">
+    <button class="tab-btn on" onclick="go('propietario',this)"><span class="ti">👤</span>Propietarios</button>
+    <button class="tab-btn" onclick="go('mascota',this)"><span class="ti">🐾</span>Mascotas</button>
+    <button class="tab-btn" onclick="go('historia',this)"><span class="ti">📋</span>Historias Clínicas</button>
+    <button class="tab-btn" onclick="go('seguimiento',this)"><span class="ti">🏥</span>Seguimiento<span class="tab-badge" id="seg-n">0</span></button>
+    <button class="tab-btn" onclick="go('recordatorios',this)"><span class="ti">🔔</span>Recordatorios</button>
+    <button class="tab-btn" onclick="go('cotizacion',this)"><span class="ti">💲</span>Cotización</button>
+    <button class="tab-btn" onclick="go('informes',this)"><span class="ti">📊</span>Informes</button>
+  </div>
+
+  <!-- CONTENT -->
+  <div class="main-content">
+
+    <!-- ══ PROPIETARIOS ══ -->
+    <div class="page on" id="page-propietario">
+      <div class="sec-hdr">
+        <div>
+          <div class="sec-title">👤 Registro de Propietarios</div>
+          <div class="sec-sub">Busca un propietario existente o registra uno nuevo</div>
+        </div>
+        <button class="btn btn-green" onclick="openM('m-prop')">+ Nuevo propietario</button>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px">
+        <div class="card">
+          <div class="card-hdr"><div class="card-title">🔍 Buscar propietario</div></div>
+          <div class="card-body">
+            <div class="srw" style="margin-bottom:10px">
+              <span class="sr-ic">🔍</span>
+              <input type="text" placeholder="Nombre, cédula o teléfono..." oninput="buscarProp(this.value)" id="search-in">
+            </div>
+            <div id="search-results" style="max-height:220px;overflow-y:auto"></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-hdr"><div class="card-title">📊 Resumen</div></div>
+          <div class="card-body">
+            <div class="stats-row" style="grid-template-columns:1fr 1fr;gap:10px;margin:0">
+              <div class="stat s1"><div class="stat-ic">👥</div><div class="stat-val" id="cnt-p">0</div><div class="stat-lbl">Propietarios</div></div>
+              <div class="stat s2"><div class="stat-ic">🐾</div><div class="stat-val" id="cnt-m">0</div><div class="stat-lbl">Mascotas</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-hdr">
+          <div class="card-title">📋 Todos los propietarios <span class="badge bg-teal" id="cnt-prop-badge">0</span></div>
+          <div class="srw" style="max-width:240px">
+            <span class="sr-ic">🔍</span>
+            <input type="text" placeholder="Filtrar..." oninput="rProp(this.value)">
+          </div>
+        </div>
+        <div class="tw">
+          <table>
+            <thead><tr><th>Propietario</th><th>Documento</th><th>Teléfono</th><th>Email</th><th>Mascotas</th><th>Registrado</th><th>Acciones</th></tr></thead>
+            <tbody id="tb-prop"></tbody>
+          </table>
+        </div>
+        <div id="em-prop" class="empty-state" style="display:none">
+          <div class="empty-ic">👥</div><div class="empty-t">Sin propietarios</div><div class="empty-s">Registra el primero</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ MASCOTAS ══ -->
+    <div class="page" id="page-mascota">
+      <div class="sec-hdr">
+        <div><div class="sec-title">🐾 Registro de Mascotas</div></div>
+        <button class="btn btn-green" onclick="openM('m-mas')">+ Nueva mascota</button>
+      </div>
+      <div class="card">
+        <div class="card-hdr">
+          <div class="card-title">🐾 Mascotas registradas</div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <div class="ftabs">
+              <button class="ftab on" onclick="fMas('todos',this)">Todas</button>
+              <button class="ftab" onclick="fMas('canino',this)">🐶 Caninos</button>
+              <button class="ftab" onclick="fMas('felino',this)">🐱 Felinos</button>
+              <button class="ftab" onclick="fMas('equino',this)">🐴 Equinos</button>
+            </div>
+          </div>
+        </div>
+        <div class="tw">
+          <table>
+            <thead><tr><th>Nombre</th><th>Especie/Raza</th><th>Género</th><th>Edad</th><th>Peso</th><th>Propietario</th><th>E. Reproductivo</th><th>Acciones</th></tr></thead>
+            <tbody id="tb-mas"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ HISTORIA CLINICA ══ -->
+    <div class="page" id="page-historia">
+      <div id="hist-list-view">
+        <div class="sec-hdr">
+          <div><div class="sec-title">📋 Historias Clínicas</div></div>
+          <div class="srw" style="max-width:320px">
+            <span class="sr-ic">🔍</span>
+            <input type="text" placeholder="Buscar por mascota, tutor o cédula..." oninput="rHistList(this.value)">
+          </div>
+        </div>
+        <div class="card">
+          <div class="tw">
+            <table>
+              <thead><tr><th>Mascota</th><th>Especie/Raza</th><th>Propietario</th><th>Edad</th><th>Registros</th><th>Última atención</th><th></th></tr></thead>
+              <tbody id="tb-hist-list"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      <div id="hist-detail-view" style="display:none">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+          <button class="btn btn-outline btn-sm" onclick="backHist()">← Volver</button>
+          <div class="sec-title" id="hist-title">Historia Clínica</div>
+          <button class="btn btn-green btn-sm" style="margin-left:auto" onclick="openHistModal()">+ Nueva entrada</button>
+          <button class="btn btn-outline btn-sm" onclick="exportHistPDF()">⬇ Exportar PDF</button>
+        </div>
+        <div id="phd-wrap"></div>
+        <div class="hist-layout">
+          <div class="hist-nav" id="hn"></div>
+          <div id="hc"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ SEGUIMIENTO ══ -->
+    <div class="page" id="page-seguimiento">
+      <div class="sec-hdr">
+        <div><div class="sec-title">🏥 Seguimiento Activo</div></div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <div class="ftabs">
+            <button class="ftab on" onclick="fSeg('todos',this)">Todos</button>
+            <button class="ftab" onclick="fSeg('hospitalizacion',this)">🏥 Hospitalización</button>
+            <button class="ftab" onclick="fSeg('ambulatorio',this)">🚶 Ambulatorio</button>
+          </div>
+          <button class="btn btn-green btn-sm" onclick="openM('m-seg')">+ Nuevo</button>
+        </div>
+      </div>
+      <div id="seg-list"></div>
+    </div>
+
+    <!-- ══ RECORDATORIOS ══ -->
+    <div class="page" id="page-recordatorios">
+      <div class="sec-hdr"><div class="sec-title">🔔 Recordatorios y Agenda</div></div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:18px">
+        <div class="card">
+          <div class="card-hdr"><div class="card-title">💉 Próximas vacunas</div></div>
+          <div class="card-body" id="rec-vac"></div>
+        </div>
+        <div class="card">
+          <div class="card-hdr"><div class="card-title">🦟 Desparasitaciones</div></div>
+          <div class="card-body" id="rec-desp"></div>
+        </div>
+        <div class="card">
+          <div class="card-hdr"><div class="card-title">🎂 Cumpleaños</div></div>
+          <div class="card-body" id="rec-birth"></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-hdr"><div class="card-title">📅 Próximos controles</div></div>
+        <div class="card-body" id="rec-ctrl"></div>
+      </div>
+    </div>
+
+    <!-- ══ COTIZACION ══ -->
+    <div class="page" id="page-cotizacion">
+      <div class="sec-hdr">
+        <div class="sec-title">💲 Cotización de Servicios</div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-outline btn-sm" onclick="resetCotizacion()">🔄 Nueva cotización</button>
+          <button class="btn btn-outline btn-sm" style="color:#ef5350;border-color:#ef5350" onclick="borrarCotizacion()">🗑 Borrar</button>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:300px 1fr;gap:18px;align-items:start">
+        <div>
+          <div class="card" style="margin-bottom:12px">
+            <div class="card-hdr"><div class="card-title">👤 Paciente</div></div>
+            <div class="card-body">
+              <div class="fi" style="margin-bottom:10px"><label>Propietario</label>
+                <select id="cot-prop" onchange="cotMas()"><option value="">Selecciona...</option></select></div>
+              <div class="fi" style="margin-bottom:10px"><label>Mascota</label>
+                <select id="cot-mas"><option value="">Selecciona...</option></select></div>
+              <div class="fi" style="margin-bottom:10px"><label>Especie</label>
+                <select id="cot-especie" onchange="cotEspecieChange()">
+                  <option value="">Selecciona especie...</option>
+                  <option value="canino">🐶 Canino</option>
+                  <option value="felino">🐱 Felino</option>
+                  <option value="equino">🐴 Equino</option>
+                  <option value="bovino">🐄 Bovino</option>
+                  <option value="otro">➕ Otro / Registrar</option>
+                </select></div>
+              <div class="fi" id="cot-esp-otro-wrap" style="display:none;margin-bottom:10px">
+                <label>Especificar especie</label>
+                <input type="text" id="cot-esp-otro" placeholder="Ej: porcino, ovino, reptil...">
+              </div>
+              <div class="fi" style="margin-bottom:10px"><label>Diagnóstico / Motivo</label>
+                <textarea id="cot-diag" style="min-height:55px" placeholder="Diagnóstico o motivo..."></textarea></div>
+              <div class="fi"><label>Pronóstico</label>
+                <textarea id="cot-pron" style="min-height:50px" placeholder="Pronóstico..."></textarea></div>
+            </div>
+          </div>
+          <div class="cot-total">
+            <div><div style="font-size:13px;font-weight:600">Total cotización</div>
+              <div style="font-size:10px;color:rgba(255,255,255,.5);margin-top:2px" id="cot-cnt">0 procedimientos</div></div>
+            <div class="cot-total-val" id="cot-total">$0</div>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:12px">
+            <button class="btn btn-green" style="flex:1" onclick="genCot()">📄 Generar cotización</button>
+          </div>
+        </div>
+
+        <div>
+          <div class="card" style="margin-bottom:14px">
+            <div class="card-hdr">
+              <div class="card-title">🏥 Procedimientos VitalVet</div>
+              <div style="display:flex;gap:6px">
+                <div class="ftabs" id="cot-cats"></div>
+                <button class="btn btn-green btn-sm" onclick="openM('m-proc')">+ Agregar</button>
+              </div>
+            </div>
+            <div class="card-body" id="cot-procs" style="max-height:480px;overflow-y:auto;padding:10px 14px"></div>
+          </div>
+
+          <div class="card">
+            <div class="card-hdr"><div class="card-title">➕ Ítems manuales</div></div>
+            <div class="card-body">
+              <div id="cot-manual-list"></div>
+              <div class="cot-manual-section">
+                <div class="cot-manual-lbl">Agregar ítem manual</div>
+                <div class="cot-manual-add">
+                  <input id="cot-man-nom" type="text" placeholder="Nombre del ítem..." style="flex:1;min-width:140px">
+                  <input id="cot-man-val" type="number" placeholder="Valor $" style="width:120px">
+                  <button class="btn btn-green btn-sm" onclick="addManualItem()">+ Agregar</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- VISTA PREVIA COTIZACIÓN -->
+      <div id="cot-preview" style="display:none;margin-top:20px">
+        <div class="card">
+          <div class="card-hdr">
+            <div class="card-title">📄 Vista previa cotización</div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <button class="btn btn-green btn-sm" id="btn-guardar-cot" onclick="saveCotSupabase()">💾 Guardar cotización</button>
+              <button class="btn btn-blue btn-sm" id="btn-gen-factura" onclick="generarFactura()" style="display:none">🧾 Generar factura</button>
+              <button class="btn btn-outline btn-sm" onclick="exportPDF('cotizacion')">📥 PDF cotización</button>
+              <button class="btn btn-outline btn-sm" onclick="window.print()">🖨 Imprimir</button>
+            </div>
+          </div>
+          <div class="card-body">
+            <div id="cot-preview-body"></div>
+            <div style="margin-top:14px">
+              <div style="font-size:10px;font-weight:700;color:var(--g700);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px">
+                📝 Información adicional / descripción del procedimiento
+              </div>
+              <textarea id="cot-notas" class="cot-preview-notes"
+                placeholder="Ej: El procedimiento incluye valoración completa, exámenes prequirúrgicos, manejo anestésico, monitoreo en quirófano, cirugía, hospitalización, medicación postoperatoria, controles y retiro de puntos."></textarea>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- VISTA FACTURA -->
+      <div id="factura-preview" style="display:none;margin-top:20px">
+        <div class="card">
+          <div class="card-hdr">
+            <div class="card-title">🧾 Factura <span id="factura-numero" style="font-family:'DM Mono',monospace;font-size:11px;color:var(--g500)"></span></div>
+            <div style="display:flex;gap:8px">
+              <span class="badge bg-green" style="font-size:10px;padding:4px 10px">✓ Factura generada — no editable</span>
+              <button class="btn btn-outline btn-sm" onclick="exportPDF('factura')">📥 PDF factura</button>
+              <button class="btn btn-outline btn-sm" onclick="window.print()">🖨 Imprimir</button>
+            </div>
+          </div>
+          <div class="card-body" id="factura-body"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ INFORMES ══ -->
+    <div class="page" id="page-informes">
+      <div class="sec-hdr"><div class="sec-title">📊 Informes y Exportables</div></div>
+      <div class="stats-row" style="margin-bottom:20px">
+        <div class="stat s1"><div class="stat-ic">👥</div><div class="stat-val" id="i-p">0</div><div class="stat-lbl">Propietarios</div></div>
+        <div class="stat s2"><div class="stat-ic">🐾</div><div class="stat-val" id="i-m">0</div><div class="stat-lbl">Mascotas</div></div>
+        <div class="stat s3"><div class="stat-ic">📋</div><div class="stat-val" id="i-h">0</div><div class="stat-lbl">Registros clínicos</div></div>
+        <div class="stat s4"><div class="stat-ic">🏥</div><div class="stat-val" id="i-s">0</div><div class="stat-lbl">En seguimiento</div></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+        <div class="card">
+          <div class="card-hdr"><div class="card-title">🐾 Por especie</div></div>
+          <div class="card-body" id="rep-esp"></div>
+        </div>
+        <div class="card">
+          <div class="card-hdr"><div class="card-title">📥 Exportar datos</div></div>
+          <div class="card-body">
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <button class="btn btn-green" onclick="exportCSV('props')">📥 Exportar propietarios CSV</button>
+              <button class="btn btn-green" onclick="exportCSV('mas')">📥 Exportar mascotas CSV</button>
+              <button class="btn btn-outline" onclick="exportCSV('hist')">📥 Exportar historias clínicas CSV</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-hdr"><div class="card-title">👥 Todos los propietarios</div>
+          <div class="srw" style="max-width:240px"><span class="sr-ic">🔍</span>
+            <input type="text" placeholder="Buscar..." oninput="rInfProp(this.value)"></div></div>
+        <div class="tw"><table>
+          <thead><tr><th>Nombre</th><th>Cédula</th><th>Teléfono</th><th>Email</th><th>Ciudad</th><th>Mascotas</th><th>Registrado</th></tr></thead>
+          <tbody id="tb-inf-prop"></tbody>
+        </table></div>
+      </div>
+      <div class="card">
+        <div class="card-hdr"><div class="card-title">🐾 Todas las mascotas</div></div>
+        <div class="tw"><table>
+          <thead><tr><th>Nombre</th><th>Especie</th><th>Raza</th><th>Género</th><th>Edad</th><th>Peso</th><th>Propietario</th><th>E.Reproductivo</th></tr></thead>
+          <tbody id="tb-inf-mas"></tbody>
+        </table></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══ MODALS ═══ -->
+
+<!-- PROPIETARIO -->
+<div class="mo" id="m-prop">
+  <div class="md">
+    <div class="mh"><div class="mt">👤 Registrar propietario</div><button class="mx" onclick="closeM('m-prop')">✕</button></div>
+    <div class="mb">
+      <div class="fg">
+        <div class="fi"><label>Tipo documento</label>
+          <select id="p-tdoc"><option value="CC">Cédula</option><option value="CE">C. Extranjería</option><option value="NIT">NIT</option></select></div>
+        <div class="fi"><label>Número *</label><input type="text" id="p-ced" placeholder="1018436172"></div>
+        <div class="fi ff"><label>Nombre completo *</label><input type="text" id="p-nom" placeholder="Nombre completo"></div>
+        <div class="fi"><label>Móvil / WhatsApp *</label><input type="tel" id="p-tel" placeholder="+57 310..."></div>
+        <div class="fi"><label>Email</label><input type="email" id="p-email" placeholder="correo@email.com"></div>
+        <div class="fi ff"><label>Dirección</label><input type="text" id="p-dir" placeholder="Cra 9 # 14-99"></div>
+        <div class="fi"><label>Ciudad</label><input type="text" id="p-ciu" value="Barbosa"></div>
+        <div class="fi"><label>¿Cómo nos encontró?</label>
+          <select id="p-como"><option value="">Selecciona</option>
+            <option value="redes">Redes sociales</option><option value="recom">Recomendación</option>
+            <option value="google">Google</option><option value="camina">Pasé por aquí</option><option value="otro">Otro</option></select></div>
+        <div class="fi"><label>Contacto autorizado</label><input type="text" id="p-cont" placeholder="Nombre"></div>
+        <div class="fi"><label>Teléfono alternativo</label><input type="tel" id="p-talt"></div>
+        <div class="fi ff" style="font-size:10px;color:var(--g700);padding:8px 12px;background:var(--g100);border-radius:var(--r-sm)">
+          ☑ El propietario acepta la política de tratamiento de datos y términos de la clínica VitalVet</div>
+      </div>
+    </div>
+    <div class="mf">
+      <button class="btn btn-outline" onclick="closeM('m-prop')">Cancelar</button>
+      <button class="btn btn-green" onclick="saveProp()">💾 Guardar propietario</button>
+    </div>
+  </div>
+</div>
+
+<!-- MASCOTA -->
+<div class="mo" id="m-mas">
+  <div class="md md-lg">
+    <div class="mh"><div class="mt">🐾 Registrar mascota</div><button class="mx" onclick="closeM('m-mas')">✕</button></div>
+    <div class="mb">
+      <div class="fg">
+        <div class="fi ff"><label>Propietario *</label>
+          <select id="m-prop-sel"><option value="">Selecciona propietario</option></select></div>
+        <div class="fdiv">Identificación</div>
+        <div class="fi"><label>Nombre *</label><input type="text" id="m-nom" placeholder="Nombre / Mote"></div>
+        <div class="fi"><label>Código / Chip</label><input type="text" id="m-chip" placeholder="Opcional"></div>
+        <div class="fi"><label>Especie *</label>
+          <select id="m-esp" onchange="updRaza()">
+            <option value="">Selecciona</option><option value="canino">Canino</option>
+            <option value="felino">Felino</option><option value="equino">Equino</option>
+            <option value="exotico">Exótico</option><option value="otro">Otro</option></select></div>
+        <div class="fi"><label>Raza</label><input type="text" id="m-raza" placeholder="Raza / Subespecie"></div>
+        <div class="fi"><label>Género</label>
+          <select id="m-gen"><option value="">Selecciona</option><option value="macho">Macho</option><option value="hembra">Hembra</option></select></div>
+        <div class="fi"><label>Color</label><input type="text" id="m-col" placeholder="Color del pelaje"></div>
+        <div class="fdiv">Datos clínicos</div>
+        <div class="fi"><label>Fecha nacimiento</label><input type="date" id="m-fn"></div>
+        <div class="fi"><label>Peso (kg)</label><input type="number" id="m-peso" placeholder="0.0" step="0.1"></div>
+        <div class="fi"><label>Talla</label>
+          <select id="m-tall"><option value="">Selecciona</option>
+            <option value="mini">Mini</option><option value="pequeño">Pequeño</option>
+            <option value="mediano">Mediano</option><option value="grande">Grande</option><option value="gigante">Gigante</option></select></div>
+        <div class="fi"><label>Estado reproductivo</label>
+          <select id="m-repr"><option value="">Selecciona</option>
+            <option value="no_esterilizado">No esterilizado</option>
+            <option value="esterilizado">Esterilizado</option><option value="castrado">Castrado</option></select></div>
+        <div class="fi ff"><label>Alimento</label><input type="text" id="m-ali" placeholder="Marca y tipo"></div>
+        <div class="fi ff" style="display:flex;gap:20px;align-items:center">
+          <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:12px">
+            <input type="checkbox" id="m-serv"> Animal de servicio</label>
+          <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:12px">
+            <input type="checkbox" id="m-emoc"> Apoyo emocional</label>
+        </div>
+      </div>
+    </div>
+    <div class="mf">
+      <button class="btn btn-outline" onclick="closeM('m-mas')">Cancelar</button>
+      <button class="btn btn-green" onclick="saveMas()">💾 Guardar e ir a Historia Clínica</button>
+    </div>
+  </div>
+</div>
+
+<!-- HISTORIA ENTRADA -->
+<div class="mo" id="m-hist">
+  <div class="md md-lg">
+    <div class="mh"><div class="mt" id="mh-title">📋 Nueva entrada clínica</div><button class="mx" onclick="closeM('m-hist')">✕</button></div>
+    <div class="mb">
+      <div class="fg" style="margin-bottom:14px">
+        <div class="fi"><label>Tipo de registro</label>
+          <select id="h-tipo" onchange="renderHistForm()">
+            <option value="consulta">🔬 Consulta</option>
+            <option value="vacunacion">💉 Vacunación</option>
+            <option value="desparasitacion">🦟 Desparasitación</option>
+            <option value="formula">💊 Fórmula médica</option>
+            <option value="cirugia">🔪 Cirugía / Procedimiento</option>
+            <option value="laboratorio">🧪 Examen de laboratorio</option>
+            <option value="imagen">📡 Imagen diagnóstica</option>
+            <option value="hospitalizacion">🏥 Hospitalización/Ambulatorio</option>
+            <option value="orden">📄 Orden</option>
+            <option value="peluqueria">✂️ Peluquería y Spa</option>
+            <option value="guarderia">🏠 Guardería</option>
+            <option value="seguimiento">📊 Seguimiento</option>
+            <option value="documento">📁 Documento</option>
+            <option value="remision">🚑 Remisión</option>
+            <option value="cita">📅 Cita</option>
+            <option value="mensaje">💬 Mensaje al propietario</option>
+          </select></div>
+        <div class="fi"><label>Fecha y hora</label><input type="datetime-local" id="h-fecha"></div>
+        <div class="fi"><label>Veterinario / Usuario</label><input type="text" id="h-vet" value="Dr. Iván Durán MV"></div>
+      </div>
+      <div id="h-dynamic-fields"></div>
+    </div>
+    <div class="mf">
+      <button class="btn btn-outline" onclick="closeM('m-hist')">Cancelar</button>
+      <button class="btn btn-green" id="h-save-btn" onclick="saveHist()">💾 Guardar entrada</button>
+    </div>
+  </div>
+</div>
+
+<!-- SEGUIMIENTO -->
+<div class="mo" id="m-seg">
+  <div class="md">
+    <div class="mh"><div class="mt">🏥 Nuevo seguimiento</div><button class="mx" onclick="closeM('m-seg')">✕</button></div>
+    <div class="mb">
+      <div class="fg">
+        <div class="fi ff"><label>Mascota *</label><select id="sg-mas"></select></div>
+        <div class="fi"><label>Tipo</label>
+          <select id="sg-tipo"><option value="hospitalizacion">🏥 Hospitalización</option><option value="ambulatorio">🚶 Ambulatorio</option></select></div>
+        <div class="fi"><label>Día actual</label><input type="number" id="sg-dia" value="1" min="1"></div>
+        <div class="fi ff"><label>Diagnóstico *</label><input type="text" id="sg-diag" placeholder="Diagnóstico principal"></div>
+        <div class="fi ff"><label>Tratamiento</label><textarea id="sg-trat" placeholder="Protocolo de tratamiento..."></textarea></div>
+        <div class="fi ff"><label>Notas</label><textarea id="sg-not" placeholder="Observaciones..." style="min-height:55px"></textarea></div>
+      </div>
+    </div>
+    <div class="mf">
+      <button class="btn btn-outline" onclick="closeM('m-seg')">Cancelar</button>
+      <button class="btn btn-green" onclick="saveSeg()">💾 Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- PROCEDIMIENTO -->
+<div class="mo" id="m-proc">
+  <div class="md">
+    <div class="mh"><div class="mt">➕ Nuevo procedimiento</div><button class="mx" onclick="closeM('m-proc')">✕</button></div>
+    <div class="mb">
+      <div class="fg">
+        <div class="fi ff"><label>Nombre del procedimiento *</label><input type="text" id="proc-nom" placeholder="Ej: Cirugía de esterilización canina"></div>
+        <div class="fi"><label>Categoría</label>
+          <select id="proc-cat">
+            <option value="consulta">Consulta</option><option value="cirugia">Cirugía</option>
+            <option value="laboratorio">Laboratorio</option><option value="imagen">Imagen</option>
+            <option value="vacunacion">Vacunación</option><option value="hospitalizacion">Hospitalización</option>
+            <option value="peluqueria">Peluquería</option><option value="otro">Otro</option></select></div>
+        <div class="fi"><label>Precio (COP)</label><input type="number" id="proc-precio" placeholder="0" min="0"></div>
+        <div class="fi ff"><label>Descripción</label><textarea id="proc-desc" style="min-height:55px" placeholder="Descripción breve..."></textarea></div>
+      </div>
+    </div>
+    <div class="mf">
+      <button class="btn btn-outline" onclick="closeM('m-proc')">Cancelar</button>
+      <button class="btn btn-green" onclick="saveProc()">💾 Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- EDITAR PROPIETARIO -->
+<div class="mo" id="m-edit-prop">
+  <div class="md">
+    <div class="mh"><div class="mt">✏️ Editar propietario</div><button class="mx" onclick="closeM('m-edit-prop')">✕</button></div>
+    <div class="mb">
+      <input type="hidden" id="ep-id">
+      <div class="fg">
+        <div class="fi ff"><label>Nombre *</label><input type="text" id="ep-nom"></div>
+        <div class="fi"><label>Teléfono</label><input type="tel" id="ep-tel"></div>
+        <div class="fi"><label>Email</label><input type="email" id="ep-email"></div>
+        <div class="fi ff"><label>Dirección</label><input type="text" id="ep-dir"></div>
+        <div class="fi"><label>Ciudad</label><input type="text" id="ep-ciu"></div>
+        <div class="fi"><label>Contacto autorizado</label><input type="text" id="ep-cont"></div>
+      </div>
+    </div>
+    <div class="mf">
+      <button class="btn btn-outline" onclick="closeM('m-edit-prop')">Cancelar</button>
+      <button class="btn btn-green" onclick="updateProp()">💾 Actualizar</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- ═══ MÓDULOS JS ═══ -->
+<script src="/js/config.js"></script>
+<script src="/js/db.js"></script>
+<script src="/js/seed.js"></script>
+<script src="/js/helpers.js"></script>
+<script src="/js/modals.js"></script>
+<script src="/js/auth.js"></script>
+<script src="/js/nav.js"></script>
+<script src="/js/propietarios.js"></script>
+<script src="/js/mascotas.js"></script>
+<script src="/js/historia.js"></script>
+<script src="/js/seguimiento.js"></script>
+<script src="/js/recordatorios.js"></script>
+<script src="/js/cotizacion.js"></script>
+<script src="/js/informes.js"></script>
+<script src="/js/app.js"></script>
+
+</body>
+</html>
