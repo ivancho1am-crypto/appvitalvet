@@ -1,2 +1,1 @@
-// Punto de entrada principal
-window.onload = () => seed();
+// seed() y boot() se invocan desde doLogin() en auth.js
