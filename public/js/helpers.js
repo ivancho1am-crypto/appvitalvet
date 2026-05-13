@@ -23,6 +23,14 @@ function nowDt() {
   return `${n.getFullYear()}-${p(n.getMonth() + 1)}-${p(n.getDate())}T${p(n.getHours())}:${p(n.getMinutes())}`;
 }
 
+// Parsea fechas en formato 'yyyy-mm-dd HH:MM' o 'dd/mm/yyyy HH:MM'
+function parseFecha(f) {
+  if (!f) return new Date(0);
+  if (/^\d{4}-\d{2}-\d{2}/.test(f)) return new Date(f.replace(' ', 'T'));
+  const [d, m, y] = f.split(/[\/ ]/);
+  return new Date(`${y}-${m}-${d}T${f.split(' ')[1] || '00:00'}`);
+}
+
 function fmt$(n) {
   return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(n || 0);
 }

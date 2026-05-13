@@ -1,18 +1,39 @@
 // Módulo: Seguimiento activo
 let segFilter = 'todos';
 
+let _editSegId = null;
+
 function saveSeg() {
   const mid = document.getElementById('sg-mas').value, diag = document.getElementById('sg-diag').value.trim();
   if (!mid || !diag) { toast('Mascota y diagnóstico son obligatorios', 'err'); return }
-  const ns = {
-    id: 's' + Date.now(), mid, tipo: document.getElementById('sg-tipo').value, diag,
-    trat: document.getElementById('sg-trat').value.trim(),
-    dia: parseInt(document.getElementById('sg-dia').value) || 1,
-    activo: true, not: document.getElementById('sg-not').value.trim(),
-    fecha: new Date().toLocaleDateString('es-CO')
-  };
-  const segs = DB.get('segs'); segs.push(ns); DB.set('segs', segs);
-  closeM('m-seg'); rSeg(); rStats(); toast('Seguimiento registrado ✓', 'ok');
+  const segs = DB.get('segs');
+  if (_editSegId) {
+    const s = segs.find(x => x.id === _editSegId);
+    if (s) { s.tipo = document.getElementById('sg-tipo').value; s.diag = diag; s.trat = document.getElementById('sg-trat').value.trim(); s.dia = parseInt(document.getElementById('sg-dia').value) || s.dia; s.not = document.getElementById('sg-not').value.trim(); }
+    DB.set('segs', segs); _editSegId = null;
+    const btn = document.getElementById('sg-save-btn'); if (btn) btn.textContent = '💾 Guardar';
+    closeM('m-seg'); rSeg(); toast('Seguimiento actualizado ✓', 'ok');
+  } else {
+    const ns = { id: 's' + Date.now(), mid, tipo: document.getElementById('sg-tipo').value, diag, trat: document.getElementById('sg-trat').value.trim(), dia: parseInt(document.getElementById('sg-dia').value) || 1, activo: true, not: document.getElementById('sg-not').value.trim(), fecha: new Date().toLocaleDateString('es-CO') };
+    segs.push(ns); DB.set('segs', segs);
+    closeM('m-seg'); rSeg(); rStats(); toast('Seguimiento registrado ✓', 'ok');
+  }
+}
+
+function editSeg(id) {
+  const s = DB.get('segs').find(x => x.id === id); if (!s) return;
+  _editSegId = id;
+  updSelects();
+  openM('m-seg');
+  setTimeout(() => {
+    document.getElementById('sg-mas').value = s.mid;
+    document.getElementById('sg-tipo').value = s.tipo;
+    document.getElementById('sg-dia').value = s.dia;
+    document.getElementById('sg-diag').value = s.diag;
+    document.getElementById('sg-trat').value = s.trat || '';
+    document.getElementById('sg-not').value = s.not || '';
+    const btn = document.getElementById('sg-save-btn'); if (btn) btn.textContent = '💾 Actualizar';
+  }, 60);
 }
 
 function rSeg(f) {
@@ -37,6 +58,7 @@ function rSeg(f) {
       <div class="seg-day"><div class="seg-dn">${s.dia}</div><div class="seg-dl">Día</div></div>
       <div style="display:flex;flex-direction:column;gap:6px">
         <button class="btn btn-outline btn-sm" onclick="diaPlus('${s.id}')">+1 Día</button>
+        <button class="btn btn-outline btn-sm" onclick="editSeg('${s.id}')">✏️ Editar</button>
         <button class="btn btn-red btn-sm" onclick="darAlta('${s.id}')">Alta médica</button>
       </div>
     </div>`;

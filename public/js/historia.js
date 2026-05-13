@@ -21,7 +21,8 @@ function rHistList(q) {
   if (q) data = mas.filter(m => { const p = props.find(x => x.id === m.pid); return m.nombre.toLowerCase().includes(q) || (p && (p.nombre.toLowerCase().includes(q) || p.cedula.includes(q))); });
   const tb = document.getElementById('tb-hist-list'); if (!tb) return;
   tb.innerHTML = data.map(m => {
-    const p = props.find(x => x.id === m.pid), cnt = hist.filter(h => h.mid === m.id).length, ult = hist.filter(h => h.mid === m.id).pop();
+    const mHist = hist.filter(h => h.mid === m.id).sort((a, b) => parseFecha(b.fecha) - parseFecha(a.fecha));
+    const p = props.find(x => x.id === m.pid), cnt = mHist.length, ult = mHist[0];
     return `<tr>
       <td><div class="ac"><div style="font-size:22px">${EI(m.esp)}</div>
       <div><div class="cn">${m.nombre}</div><div class="cs">${m.raza || ''}</div></div></div></td>
@@ -84,7 +85,7 @@ function showHT(tipo, btn) {
   if (btn) btn.classList.add('on'); else { const first = document.querySelector('.hn-item'); if (first) first.classList.add('on') }
 
   if (tipo === 'historia_general') {
-    const all = DB.get('hist').filter(h => h.mid === currentPet).sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+    const all = DB.get('hist').filter(h => h.mid === currentPet).sort((a, b) => parseFecha(b.fecha) - parseFecha(a.fecha));
     document.getElementById('hc').innerHTML = `
       <div class="card">
         <div class="card-hdr">
@@ -124,9 +125,9 @@ function renderHistCard(h) {
     (h.tipo_desp ? 'Desparasitación ' + h.tipo_desp : '') ||
     h.desc || HLBL[tipo] || tipo;
 
-  if (tipo === 'consulta') { fields += row('Motivo', h.desc); fields += row('Examen físico', h.exam); fields += row('Diagnóstico', h.diag); fields += row('Tratamiento', h.trat); fields += row('Medicamentos', h.med); fields += row('Observaciones', h.not); fields += row('Próxima cita', h.prox); }
+  if (tipo === 'consulta') { fields += row('Motivo', h.desc); fields += row('Examen físico', h.exam); fields += row('Diagnóstico', h.diag); fields += row('Tratamiento', h.trat); fields += row('Medicamentos', h.med); fields += row('Peso', h.peso ? h.peso + ' kg' : ''); fields += row('Observaciones', h.not); fields += row('Próxima cita', h.prox); }
   else if (tipo === 'vacunacion') { fields += row('Vacuna', h.vacuna); fields += row('Laboratorio', h.lab); fields += row('Lote', h.lote); fields += row('Vía', h.via); fields += row('Próxima vacunación', h.prox); fields += row('Observaciones', h.not); }
-  else if (tipo === 'desparasitacion') { fields += row('Tipo', h.tipo_desp); fields += row('Producto', h.producto); fields += row('Dosis', h.dosis); fields += row('Próximo control', h.prox); fields += row('Observaciones', h.not); }
+  else if (tipo === 'desparasitacion') { fields += row('Tipo', h.tipo_desp); fields += row('Producto', h.producto); fields += row('Dosis', h.dosis); fields += row('Última desparasitación', h.ult_desp); fields += row('Próximo control', h.prox); fields += row('Observaciones', h.not); }
   else if (tipo === 'formula') { fields += row('Diagnóstico presuntivo/final', h.diag); fields += row('Medicamentos', h.med); fields += row('Observaciones', h.not); }
   else if (tipo === 'cirugia') { fields += row('Procedimiento', h.cirugia); fields += row('Descripción', h.desc); fields += row('Preanestésico', h.prean); fields += row('Anestésico', h.anest); fields += row('Medicamentos', h.med); fields += row('Postoperatorio', h.trat); fields += row('Complicaciones', h.complic); fields += row('Próxima revisión', h.prox); fields += row('Observaciones', h.not); }
   else if (tipo === 'laboratorio') { fields += row('Exámenes', h.desc); fields += row('Diagnóstico presuntivo', h.diag); fields += row('Observaciones', h.not); }
@@ -134,12 +135,12 @@ function renderHistCard(h) {
   else if (tipo === 'hospitalizacion') { fields += row('Tipo', h.tipo_hosp); fields += row('Ingreso', h.ingreso); fields += row('Salida', h.salida); fields += row('Motivo de salida', h.motivo_salida); fields += row('Razón', h.desc); fields += row('Evolución', h.not); }
   else if (tipo === 'orden') { fields += row('Órdenes', h.desc); fields += row('Motivo', h.not); }
   else if (tipo === 'peluqueria') { fields += row('Servicios', h.desc); fields += row('Próxima cita', h.prox); fields += row('Antirrábica vigente', h.rabia); fields += row('Observaciones', h.not); }
-  else if (tipo === 'guarderia') { fields += row('Ingreso', h.ingreso); fields += row('Salida', h.salida); fields += row('Tipo', h.tipo_guard); fields += row('Comida', h.comida); fields += row('Objetos', h.objetos); fields += row('Observaciones', h.not); }
-  else if (tipo === 'seguimiento') { fields += row('Tipo', h.tipo_seg); fields += row('Descripción', h.desc); fields += row('Actitud', h.actitud); fields += row('Hidratación', h.hidrat); fields += row('Mucosas', h.mucosas); fields += row('Cardiovascular', h.cardio); fields += row('Respiratorio', h.resp); fields += row('Digestivo', h.digest); fields += row('Próximo control', h.prox); fields += row('Mensaje', h.not); }
-  else if (tipo === 'documento') { fields += row('Tipo', h.tipo_doc); fields += row('Documento', h.nom_doc); fields += row('Contenido', h.desc); fields += row('Observaciones', h.not); }
+  else if (tipo === 'guarderia') { fields += row('Ingreso', h.ingreso); fields += row('Salida', h.salida); fields += row('Tipo', h.tipo_guard); fields += row('Comida', h.comida ? h.comida + (h.cant_comida ? ' — ' + h.cant_comida : '') : ''); fields += row('Objetos', h.objetos); fields += row('Observaciones', h.not); }
+  else if (tipo === 'seguimiento') { fields += row('Tipo', h.tipo_seg); fields += row('Motivo', h.motivo_seg); fields += row('Descripción', h.desc); fields += row('Actitud', h.actitud); fields += row('Hidratación', h.hidrat); fields += row('Mucosas', h.mucosas); fields += row('Cardiovascular', h.cardio); fields += row('Respiratorio', h.resp); fields += row('Digestivo', h.digest); fields += row('Próximo control', h.prox); fields += row('Mensaje', h.not); }
+  else if (tipo === 'documento') { fields += row('Tipo', h.tipo_doc); fields += row('Documento', h.nom_doc); fields += row('Requiere firma', h.firma); fields += row('Contenido', h.desc); fields += row('Observaciones', h.not); }
   else if (tipo === 'remision') { fields += row('Centro destino', h.destino); fields += row('Razón', h.desc); fields += row('Observaciones', h.not); }
   else if (tipo === 'cita') { fields += row('Tipo', h.tipo_cita); fields += row('Fecha cita', h.fecha_cita); fields += row('Estado', h.estado_cita); fields += row('Comentarios', h.not); }
-  else if (tipo === 'mensaje') { fields += row('Mensaje', h.desc); fields += row('Observaciones', h.not); }
+  else if (tipo === 'mensaje') { fields += row('Mensaje', h.desc); fields += row('Vías de notificación', h.vias); fields += row('Observaciones', h.not); }
   else { fields += row('Descripción', h.desc); fields += row('Diagnóstico', h.diag); fields += row('Tratamiento', h.trat); fields += row('Observaciones', h.not); }
 
   return `<div class="tl-item">
@@ -403,9 +404,9 @@ function collectHistFields() {
   const gv = id => { const el = document.getElementById(id); return el ? el.value.trim() : '' };
   const base = { tipo, fecha: document.getElementById('h-fecha').value.replace('T', ' '), vet: document.getElementById('h-vet').value.trim() };
   const extra = {};
-  if (tipo === 'consulta') { extra.desc = gv('h-desc'); extra.diag = gv('h-diag') + (gv('h-diag2') ? ' | Def: ' + gv('h-diag2') : ''); extra.trat = gv('h-trat'); extra.med = gv('h-med'); extra.not = gv('h-not'); extra.prox = gv('h-prox'); extra.exam = gv('h-exam'); }
+  if (tipo === 'consulta') { extra.desc = gv('h-desc'); extra.diag = gv('h-diag') + (gv('h-diag2') ? ' | Def: ' + gv('h-diag2') : ''); extra.trat = gv('h-trat'); extra.med = gv('h-med'); extra.not = gv('h-not'); extra.prox = gv('h-prox'); extra.exam = gv('h-exam'); extra.peso = gv('h-peso'); }
   else if (tipo === 'vacunacion') { extra.vacuna = gv('h-vacuna'); extra.lab = gv('h-lab'); extra.lote = gv('h-lote'); extra.via = gv('h-via'); extra.not = gv('h-not'); extra.prox = gv('h-prox'); extra.desc = 'Vacunación: ' + gv('h-vacuna'); extra.diag = ''; }
-  else if (tipo === 'desparasitacion') { extra.tipo_desp = gv('h-tipo-desp'); extra.producto = gv('h-producto'); extra.dosis = gv('h-dosis'); extra.not = gv('h-not'); extra.prox = gv('h-prox'); extra.desc = 'Desparasitación (' + gv('h-tipo-desp') + '): ' + gv('h-producto'); extra.diag = ''; }
+  else if (tipo === 'desparasitacion') { extra.tipo_desp = gv('h-tipo-desp'); extra.producto = gv('h-producto'); extra.dosis = gv('h-dosis'); extra.ult_desp = gv('h-ult-desp'); extra.not = gv('h-not'); extra.prox = gv('h-prox'); extra.desc = 'Desparasitación (' + gv('h-tipo-desp') + '): ' + gv('h-producto'); extra.diag = ''; }
   else if (tipo === 'formula') {
     const meds = [...document.querySelectorAll('.med-item')].map(el => ({ nom: el.querySelector('.med-nom')?.value || '', pres: el.querySelector('.med-pres')?.value || '', cant: el.querySelector('.med-cant')?.value || '', pos: el.querySelector('.med-pos')?.value || '' }));
     extra.diag = gv('h-diag'); extra.med = meds.map(m => `${m.nom} ${m.pres} #${m.cant}. ${m.pos}`).join('\n'); extra.not = gv('h-not'); extra.desc = 'Fórmula médica'; extra.trat = '';
@@ -422,15 +423,27 @@ function collectHistFields() {
     extra.desc = 'Órdenes: ' + ords.map(o => o.tipo + ' - ' + o.esp).join('; '); extra.not = gv('h-not');
   }
   else if (tipo === 'peluqueria') {
-    const servs = [...document.querySelectorAll('.serv-item')].map(el => el.querySelector('.serv-tipo')?.value || '');
-    extra.desc = 'Peluquería: ' + servs.join(', '); extra.not = gv('h-not'); extra.prox = gv('h-prox'); extra.rabia = gv('h-rabia');
+    const servs = [...document.querySelectorAll('.serv-item')].map(el => ({
+      tipo: el.querySelector('.serv-tipo')?.value || '',
+      enc: el.querySelector('.serv-enc')?.value || '',
+      det: el.querySelector('.serv-det')?.value || ''
+    }));
+    extra.desc = 'Peluquería: ' + servs.map(s => s.tipo + (s.enc ? ' (enc: ' + s.enc + ')' : '') + (s.det ? ' — ' + s.det : '')).join('; ');
+    extra.not = gv('h-not'); extra.prox = gv('h-prox'); extra.rabia = gv('h-rabia');
   }
-  else if (tipo === 'guarderia') { extra.ingreso = gv('h-ingreso'); extra.salida = gv('h-salida'); extra.tipo_guard = gv('h-tipo-guard'); extra.comida = gv('h-comida'); extra.not = gv('h-not'); extra.desc = 'Guardería'; }
-  else if (tipo === 'seguimiento') { extra.tipo_seg = gv('h-tipo-seg'); extra.desc = gv('h-desc'); extra.not = gv('h-not'); extra.prox = gv('h-prox'); extra.actitud = gv('h-actitud'); extra.hidrat = gv('h-hidrat'); extra.mucosas = gv('h-mucosas'); }
-  else if (tipo === 'documento') { extra.tipo_doc = gv('h-tipo-doc'); extra.nom_doc = gv('h-nom-doc'); extra.desc = gv('h-desc'); extra.not = gv('h-not'); }
+  else if (tipo === 'guarderia') { extra.ingreso = gv('h-ingreso'); extra.salida = gv('h-salida'); extra.tipo_guard = gv('h-tipo-guard'); extra.comida = gv('h-comida'); extra.cant_comida = gv('h-cant-comida'); extra.objetos = gv('h-objetos'); extra.not = gv('h-not'); extra.desc = 'Guardería'; }
+  else if (tipo === 'seguimiento') { extra.tipo_seg = gv('h-tipo-seg'); extra.motivo_seg = gv('h-motivo-seg'); extra.desc = gv('h-desc'); extra.not = gv('h-not'); extra.prox = gv('h-prox'); extra.actitud = gv('h-actitud'); extra.hidrat = gv('h-hidrat'); extra.mucosas = gv('h-mucosas'); extra.cardio = gv('h-cardio'); extra.resp = gv('h-resp'); extra.digest = gv('h-digest'); }
+  else if (tipo === 'documento') { extra.tipo_doc = gv('h-tipo-doc'); extra.nom_doc = gv('h-nom-doc'); extra.firma = gv('h-firma'); extra.desc = gv('h-desc'); extra.not = gv('h-not'); }
   else if (tipo === 'remision') { extra.destino = gv('h-destino'); extra.desc = gv('h-desc'); extra.not = gv('h-not'); }
   else if (tipo === 'cita') { extra.tipo_cita = gv('h-tipo-cita'); extra.fecha_cita = gv('h-fecha-cita'); extra.estado_cita = gv('h-estado-cita'); extra.not = gv('h-not'); extra.desc = 'Cita: ' + gv('h-tipo-cita'); }
-  else if (tipo === 'mensaje') { extra.desc = gv('h-desc'); extra.not = gv('h-not'); }
+  else if (tipo === 'mensaje') {
+    extra.desc = gv('h-desc'); extra.not = gv('h-not');
+    const vias = [];
+    if (document.getElementById('h-via-email')?.checked) vias.push('email');
+    if (document.getElementById('h-via-wa')?.checked) vias.push('whatsapp');
+    if (document.getElementById('h-via-sms')?.checked) vias.push('sms');
+    extra.vias = vias.join(', ');
+  }
   return { ...base, ...extra, files: [] };
 }
 
@@ -492,4 +505,67 @@ function backHist() {
   currentPet = null;
 }
 
-function exportHistPDF() { toast('Para exportar PDF: usa Ctrl+P → Guardar como PDF', 'info') }
+function exportHistPDF() {
+  if (!window.jspdf) { toast('jsPDF no disponible', 'err'); return; }
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  const W = 210, M = 18;
+  const teal = [11, 124, 122], dark = [48, 61, 58], gray = [122, 146, 168], light = [232, 247, 243];
+  const mas = DB.get('mas'), props = DB.get('props');
+  const m = mas.find(x => x.id === currentPet); if (!m) return;
+  const p = props.find(x => x.id === m.pid);
+  const hist = DB.get('hist').filter(h => h.mid === currentPet).sort((a, b) => parseFecha(b.fecha) - parseFecha(a.fecha));
+
+  doc.setFillColor(...dark); doc.rect(0, 0, W, 36, 'F');
+  doc.setTextColor(255, 255, 255); doc.setFont('helvetica', 'bold'); doc.setFontSize(18); doc.text('VitalVet', M, 15);
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(180, 200, 196);
+  doc.text('Centro de Cirugía Compleja y Medicina Avanzada · Barbosa, Santander', M, 21);
+  doc.text('Historia Clínica · Dr. Iván Durán MV', M, 26);
+  doc.setTextColor(...teal); doc.setFont('helvetica', 'bold'); doc.setFontSize(11);
+  doc.text('HISTORIA CLÍNICA', W - M, 15, { align: 'right' });
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(180, 200, 196);
+  doc.text(new Date().toLocaleDateString('es-CO'), W - M, 21, { align: 'right' });
+
+  let y = 44;
+  doc.setFillColor(...light); doc.roundedRect(M, y, W - M * 2, 22, 3, 3, 'F');
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(7.5); doc.setTextColor(...teal);
+  doc.text('PACIENTE', M + 4, y + 7); doc.text('PROPIETARIO / TUTOR', M + 92, y + 7);
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.setTextColor(...dark);
+  doc.text(EI(m.esp).replace(/\p{Emoji}/u, '') + ' ' + m.nombre, M + 4, y + 15);
+  doc.text(p ? p.nombre : '—', M + 92, y + 15);
+  doc.setFontSize(7.5); doc.setTextColor(...gray);
+  doc.text((m.esp || '') + (m.raza ? ' · ' + m.raza : '') + (m.fn ? ' · ' + edad(m.fn) : '') + (m.peso ? ' · ' + m.peso + ' kg' : ''), M + 4, y + 20);
+  if (p && p.telefono) doc.text(p.telefono, M + 92, y + 20);
+  y += 30;
+
+  if (!hist.length) { doc.setFont('helvetica', 'italic'); doc.setFontSize(9); doc.setTextColor(...gray); doc.text('Sin registros clínicos.', M, y); }
+  hist.forEach((h, i) => {
+    if (y > 255) { doc.addPage(); y = 20; }
+    const bg = i % 2 === 0 ? [248, 252, 251] : [255, 255, 255];
+    doc.setFillColor(...bg); doc.rect(M, y, W - M * 2, 8, 'F');
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(...teal);
+    doc.text((HLBL[h.tipo] || h.tipo).toUpperCase(), M + 2, y + 5.5);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(...gray);
+    doc.text(h.fecha + (h.vet ? '  ·  ' + h.vet : ''), W - M - 2, y + 5.5, { align: 'right' });
+    y += 8;
+    const lines = [];
+    if (h.desc) lines.push('Descripción: ' + h.desc);
+    if (h.diag) lines.push('Dx: ' + h.diag);
+    if (h.trat) lines.push('Tx: ' + h.trat);
+    if (h.med) lines.push('Medicamentos: ' + h.med);
+    if (h.prox) lines.push('Próximo: ' + h.prox);
+    if (h.not) lines.push('Obs: ' + h.not);
+    lines.forEach(ln => {
+      if (y > 270) { doc.addPage(); y = 20; }
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(...dark);
+      const wrapped = doc.splitTextToSize(ln, W - M * 2 - 4);
+      doc.text(wrapped, M + 4, y);
+      y += wrapped.length * 4.5;
+    });
+    y += 3;
+    doc.setDrawColor(...gray); doc.setLineWidth(0.2); doc.line(M, y, W - M, y); y += 4;
+  });
+
+  doc.save('VitalVet_Historia_' + m.nombre.replace(/\s+/g, '_') + '.pdf');
+  toast('📥 PDF historia descargado', 'ok');
+}

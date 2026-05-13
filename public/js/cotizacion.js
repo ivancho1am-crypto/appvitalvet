@@ -26,7 +26,7 @@ const COT = {
 
 function rCotizacion() {
   const ps = document.getElementById('cot-prop');
-  if (ps) { const sv = ps.value, p = DB.get('props'); ps.innerHTML = '<option value="">Sin propietario registrado</option>' + p.map(x => `<option value="${x.id}">${x.nombre}</option>`).join(''); if (sv) ps.value = sv; }
+  if (ps) { const sv = ps.value, p = DB.get('props'); ps.innerHTML = '<option value="">Selecciona propietario...</option>' + p.map(x => `<option value="${x.id}">${x.nombre}</option>`).join(''); if (sv) ps.value = sv; }
   const cats = ['todos', 'consulta', 'cirugia', 'laboratorio', 'imagen', 'vacunacion', 'hospitalizacion', 'peluqueria', 'otro'];
   const catLbl = { todos: 'Todos', consulta: 'Consulta', cirugia: 'Cirugía', laboratorio: 'Lab', imagen: 'Imagen', vacunacion: 'Vacuna', hospitalizacion: 'Hosp.', peluqueria: 'Peluq.', otro: 'Otro' };
   const ce = document.getElementById('cot-cats');
@@ -272,19 +272,20 @@ async function generarFactura() {
   const ctx = _getCotContext();
   const sb = getSB();
   const factNumero = 'FAC-' + Date.now().toString().slice(-6);
+  const sbCotId = COT.guardadaId && !String(COT.guardadaId).startsWith('local-') ? COT.guardadaId : null;
   const factPayload = {
-    cotizacion_id: typeof COT.guardadaId === 'number' ? COT.guardadaId : null,
+    cotizacion_id: sbCotId,
     propietario_id: document.getElementById('cot-prop').value || null,
     numero: factNumero, total: COT.total, estado: 'emitida', created_at: new Date().toISOString()
   };
   try {
     let factId = null;
-    if (sb && typeof COT.guardadaId === 'number') {
+    if (sb && sbCotId) {
       const { data, error } = await sb.from('facturas').insert([factPayload]).select();
       if (error) throw error;
       factId = data[0]?.id;
       if (factId) {
-        const ip = COT.allItems.map(i => ({ factura_id: factId, cotizacion_id: COT.guardadaId, nombre: i.nombre, precio: i.precio, categoria: i.cat, tipo: i.tipo }));
+        const ip = COT.allItems.map(i => ({ factura_id: factId, cotizacion_id: sbCotId, nombre: i.nombre, precio: i.precio, categoria: i.cat, tipo: i.tipo }));
         await sb.from('factura_items').insert(ip);
       }
     }

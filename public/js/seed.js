@@ -23,13 +23,13 @@ function seed() {
     { id: 's3', mid: 'm5', tipo: 'hospitalizacion', diag: 'Post-op orquiectomía', trat: 'Meloxicam 0.5mg/kg, antibiótico profiláctico', dia: 1, activo: true, not: 'Recuperando', fecha: '16/04/2026' },
   ]);
   DB.set('hist', [
-    { id: 'h1', mid: 'm4', tipo: 'laboratorio', fecha: '14/04/2026 15:02', desc: 'Hemograma completo', diag: 'Anemia leve', trat: 'Suplemento hierro', med: '', vet: 'Dr. Iván Durán MV', not: '', prox: '', files: [] },
-    { id: 'h2', mid: 'm3', tipo: 'formula', fecha: '14/04/2026 15:14', desc: 'Dermatitis recurrente', diag: 'Dermatitis atópica', trat: 'Apoquel + champú medicado', med: 'Apoquel 5mg c/24h x 30 días', vet: 'Dr. Iván Durán MV', not: '', prox: '2026-05-14', files: [] },
-    { id: 'h3', mid: 'm5', tipo: 'cirugia', fecha: '13/04/2026 14:22', desc: 'Orquiectomía electiva', diag: '', trat: 'Anestesia general TIVA', med: '', vet: 'Dr. Iván Durán MV', not: 'Post-op sin novedad', prox: '2026-04-20', files: [] },
-    { id: 'h4', mid: 'm6', tipo: 'cirugia', fecha: '13/04/2026 13:00', desc: 'Cirugía rodilla — ruptura LCA', diag: 'Ruptura LCA', trat: 'TPLO', med: '', vet: 'Dr. Iván Durán MV', not: '', prox: '', files: [] },
-    { id: 'h5', mid: 'm2', tipo: 'vacunacion', fecha: '28/03/2026 10:00', desc: 'Vacuna polivalente', diag: '', trat: '', med: 'Nobivac DA2PP', vet: 'Dr. Iván Durán MV', not: 'Próxima en 1 año', prox: '2027-03-28', files: [] },
-    { id: 'h6', mid: 'm1', tipo: 'consulta', fecha: '16/04/2026 09:30', desc: 'Control rutinario', diag: 'Paciente sana', trat: '', med: '', vet: 'Dr. Iván Durán MV', not: '', prox: '', files: [] },
-    { id: 'h7', mid: 'm7', tipo: 'vacunacion', fecha: '16/04/2026 10:51', desc: 'Vacuna puppy', diag: '', trat: '', med: 'Nobivac® Puppy DP', vet: 'Monica Sanchez', not: '', prox: '2026-05-05', files: [] },
+    { id: 'h1', mid: 'm4', tipo: 'laboratorio', fecha: '2026-04-14 15:02', desc: 'Hemograma completo', diag: 'Anemia leve', trat: 'Suplemento hierro', med: '', vet: 'Dr. Iván Durán MV', not: '', prox: '', files: [] },
+    { id: 'h2', mid: 'm3', tipo: 'formula', fecha: '2026-04-14 15:14', desc: 'Dermatitis recurrente', diag: 'Dermatitis atópica', trat: 'Apoquel + champú medicado', med: 'Apoquel 5mg c/24h x 30 días', vet: 'Dr. Iván Durán MV', not: '', prox: '2026-05-14', files: [] },
+    { id: 'h3', mid: 'm5', tipo: 'cirugia', fecha: '2026-04-13 14:22', desc: 'Orquiectomía electiva', diag: '', trat: 'Anestesia general TIVA', med: '', vet: 'Dr. Iván Durán MV', not: 'Post-op sin novedad', prox: '2026-04-20', files: [] },
+    { id: 'h4', mid: 'm6', tipo: 'cirugia', fecha: '2026-04-13 13:00', desc: 'Cirugía rodilla — ruptura LCA', diag: 'Ruptura LCA', trat: 'TPLO', med: '', vet: 'Dr. Iván Durán MV', not: '', prox: '', files: [] },
+    { id: 'h5', mid: 'm2', tipo: 'vacunacion', fecha: '2026-03-28 10:00', desc: 'Vacuna polivalente', diag: '', trat: '', med: 'Nobivac DA2PP', vet: 'Dr. Iván Durán MV', not: 'Próxima en 1 año', prox: '2027-03-28', files: [] },
+    { id: 'h6', mid: 'm1', tipo: 'consulta', fecha: '2026-04-16 09:30', desc: 'Control rutinario', diag: 'Paciente sana', trat: '', med: '', vet: 'Dr. Iván Durán MV', not: '', prox: '', files: [] },
+    { id: 'h7', mid: 'm7', tipo: 'vacunacion', fecha: '2026-04-16 10:51', desc: 'Vacuna puppy', diag: '', trat: '', med: 'Nobivac® Puppy DP', vet: 'Monica Sanchez', not: '', prox: '2026-05-05', files: [] },
   ]);
   DB.set('procs', [
     { id: 'pr1', nombre: 'Consulta general', cat: 'consulta', precio: 35000 }, { id: 'pr2', nombre: 'Consulta urgencia', cat: 'consulta', precio: 55000 },
