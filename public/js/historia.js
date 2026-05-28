@@ -146,9 +146,11 @@ function renderHistCard(h) {
   const archivosHtml = (h.archivos && h.archivos.length)
     ? `<div style="margin-top:6px;display:flex;align-items:center;gap:5px;flex-wrap:wrap">
         <span style="font-size:11px;font-weight:700;color:var(--g700)">📎 Archivos:</span>
-        ${h.archivos.map(f => `<a href="${f.url}" target="_blank" rel="noopener"
-          style="font-size:11px;color:var(--green);text-decoration:none;background:var(--green-lt);
-          padding:2px 8px;border-radius:20px;border:1px solid var(--green)">${f.name}</a>`).join('')}
+        ${h.archivos.map(f => `<span style="display:inline-flex;align-items:center;gap:2px;background:var(--green-lt);border:1px solid var(--green);border-radius:20px;padding:2px 4px 2px 8px">
+          <a href="${f.url}" target="_blank" rel="noopener" style="font-size:11px;color:var(--green);text-decoration:none">${f.name}</a>
+          <button onclick="deleteArchivoHist('${h.id}','${f.url}')" title="Eliminar archivo"
+            style="background:none;border:none;cursor:pointer;color:var(--g500);font-size:12px;padding:0 3px;line-height:1">✕</button>
+        </span>`).join('')}
       </div>` : '';
 
   return `<div class="tl-item">
@@ -551,6 +553,21 @@ function delHist(id, tipo) {
   if (firstItem && firstItem.classList.contains('on')) { showHT('historia_general'); }
   else { showHT(tipo); }
   buildHistNav(); rStats(); toast('Registro eliminado', 'ok');
+}
+
+async function deleteArchivoHist(histId, fileUrl) {
+  if (!confirm('¿Eliminar este archivo?')) return;
+  const sb = getSB();
+  if (sb) {
+    const match = fileUrl.match(/vitalvet-files\/(.+)$/);
+    if (match) await sb.storage.from('vitalvet-files').remove([decodeURIComponent(match[1])]).catch(() => {});
+  }
+  const hist = DB.get('hist'), h = hist.find(x => x.id === histId);
+  if (!h) return;
+  h.archivos = (h.archivos || []).filter(f => f.url !== fileUrl);
+  DB.set('hist', hist);
+  showHT(h.tipo); buildHistNav();
+  toast('Archivo eliminado ✓', 'ok');
 }
 
 function backHist() {
