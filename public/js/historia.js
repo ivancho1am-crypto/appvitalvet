@@ -143,6 +143,14 @@ function renderHistCard(h) {
   else if (tipo === 'mensaje') { fields += row('Mensaje', h.desc); fields += row('Vías de notificación', h.vias); fields += row('Observaciones', h.not); }
   else { fields += row('Descripción', h.desc); fields += row('Diagnóstico', h.diag); fields += row('Tratamiento', h.trat); fields += row('Observaciones', h.not); }
 
+  const archivosHtml = (h.archivos && h.archivos.length)
+    ? `<div style="margin-top:6px;display:flex;align-items:center;gap:5px;flex-wrap:wrap">
+        <span style="font-size:11px;font-weight:700;color:var(--g700)">📎 Archivos:</span>
+        ${h.archivos.map(f => `<a href="${f.url}" target="_blank" rel="noopener"
+          style="font-size:11px;color:var(--green);text-decoration:none;background:var(--green-lt);
+          padding:2px 8px;border-radius:20px;border:1px solid var(--green)">${f.name}</a>`).join('')}
+      </div>` : '';
+
   return `<div class="tl-item">
     <div class="tl-dot" style="background:var(--green-lt);border:2px solid var(--green)">${HICO[h.tipo] || '📌'}</div>
     <div class="tl-box">
@@ -158,6 +166,7 @@ function renderHistCard(h) {
       </div>
       <div class="tl-title" style="margin-top:6px">${title}</div>
       ${fields}
+      ${archivosHtml}
     </div>
   </div>`;
 }
@@ -223,7 +232,7 @@ const HIST_FORMS = {
       <div class="lab-item fg" style="border:1px solid var(--g200);border-radius:8px;padding:10px;margin-bottom:8px">
         <div class="fi"><label>Prueba / Examen *</label><input type="text" class="lab-exam" placeholder="Ej: Hemograma, Química sanguínea..."></div>
         <div class="fi"><label>Cantidad</label><input type="number" class="lab-cant" value="1" min="1"></div>
-        <div class="fi ff"><label>Resultado / Adjunto</label><input type="file" class="lab-result" style="font-size:12px"></div>
+        <div class="fi ff"><label>Resultados (puedes subir varios archivos)</label><input type="file" class="lab-result" multiple accept=".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx" style="font-size:12px"></div>
       </div>
     </div>
     <div class="fi ff"><button type="button" class="btn btn-outline btn-sm" onclick="addLab()">+ Agregar prueba</button></div>
@@ -369,7 +378,7 @@ function addLab() {
   div.innerHTML = `<button type="button" onclick="this.parentElement.remove()" style="position:absolute;top:6px;right:6px;background:none;border:none;cursor:pointer;color:var(--g500);font-size:14px">✕</button>
     <div class="fi"><label>Prueba / Examen *</label><input type="text" class="lab-exam" placeholder="Ej: Hemograma..."></div>
     <div class="fi"><label>Cantidad</label><input type="number" class="lab-cant" value="1" min="1"></div>
-    <div class="fi ff"><label>Resultado / Adjunto</label><input type="file" class="lab-result" style="font-size:12px"></div>`;
+    <div class="fi ff"><label>Resultados (puedes subir varios archivos)</label><input type="file" class="lab-result" multiple accept=".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx" style="font-size:12px"></div>`;
   list.appendChild(div);
 }
 function addServ() {
@@ -454,9 +463,48 @@ function openHistModal(tipo) {
   document.getElementById('h-fecha').value = nowDt();
 }
 
-function saveHist() {
+// Sube archivos al bucket de Supabase Storage y devuelve array de {name, url}
+async function uploadFiles(files, folder) {
+  const sb = getSB();
+  if (!sb || !files.length) return [];
+  const archivos = [];
+  for (const f of files) {
+    const safeName = f.name.replace(/\s+/g, '_');
+    const path = `${folder}/${Date.now()}_${safeName}`;
+    const { error } = await sb.storage.from('vitalvet-files').upload(path, f, { upsert: true });
+    if (!error) {
+      const { data: urlData } = sb.storage.from('vitalvet-files').getPublicUrl(path);
+      archivos.push({ name: f.name, url: urlData.publicUrl });
+    }
+  }
+  return archivos;
+}
+
+// Recolecta archivos del formulario activo según tipo de entrada
+async function collectAndUploadFiles(tipo) {
+  const files = [];
+  if (tipo === 'laboratorio') {
+    document.querySelectorAll('.lab-result').forEach(input => {
+      if (input.files) [...input.files].forEach(f => files.push(f));
+    });
+  } else {
+    const hFiles = document.getElementById('h-files');
+    if (hFiles && hFiles.files) [...hFiles.files].forEach(f => files.push(f));
+    const antes = document.getElementById('h-foto-antes');
+    if (antes && antes.files) [...antes.files].forEach(f => files.push(f));
+    const desp = document.getElementById('h-foto-desp');
+    if (desp && desp.files) [...desp.files].forEach(f => files.push(f));
+  }
+  if (!files.length) return [];
+  toast('Subiendo archivos…', 'info');
+  return await uploadFiles(files, `${currentPet}/${tipo}`);
+}
+
+async function saveHist() {
   if (!currentPet) { toast('Selecciona una mascota', 'err'); return }
   const h = { id: 'h' + Date.now(), mid: currentPet, ...collectHistFields() };
+  const archivos = await collectAndUploadFiles(h.tipo);
+  if (archivos.length) h.archivos = archivos;
   const hist = DB.get('hist'); hist.push(h); DB.set('hist', hist);
   closeM('m-hist'); toast('Entrada guardada ✓', 'ok');
   showHT(h.tipo); buildHistNav(); rHistList(); rStats();
@@ -481,9 +529,15 @@ function editHist(id) {
       setV('h-tipo-doc', h.tipo_doc); setV('h-nom-doc', h.nom_doc);
     }, 80);
   }, 60);
-  document.getElementById('h-save-btn').onclick = function () {
+  document.getElementById('h-save-btn').onclick = async function () {
     const hist = DB.get('hist'), idx = hist.findIndex(x => x.id === id);
-    if (idx >= 0) { hist[idx] = { ...hist[idx], ...collectHistFields() }; DB.set('hist', hist); }
+    if (idx >= 0) {
+      const updated = { ...hist[idx], ...collectHistFields() };
+      const newFiles = await collectAndUploadFiles(updated.tipo);
+      if (newFiles.length) updated.archivos = [...(hist[idx].archivos || []), ...newFiles];
+      hist[idx] = updated;
+      DB.set('hist', hist);
+    }
     closeM('m-hist'); toast('Entrada actualizada ✓', 'ok');
     showHT(hist[idx]?.tipo); buildHistNav();
     document.getElementById('h-save-btn').onclick = saveHist;
