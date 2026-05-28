@@ -185,7 +185,7 @@ const HIST_FORMS = {
     <div class="fi"><label>Peso en consulta (kg)</label><input type="number" id="h-peso" step="0.1" placeholder="0.0"></div>
     <div class="fi"><label>Próxima cita / control</label><input type="date" id="h-prox"></div>
     <div class="fi ff"><label>Observaciones</label><textarea id="h-not" placeholder="Observaciones adicionales..." style="min-height:50px"></textarea></div>
-    <div class="fi ff"><label>Adjuntos</label><input type="file" multiple id="h-files" style="font-size:12px"></div></div>`,
+    <div class="fi ff"><label>Adjuntos</label><input type="file" multiple id="h-files" accept=".pdf,.jpg,.jpeg,.png,.webp,.gif,.doc,.docx" style="font-size:12px"></div></div>`,
   vacunacion: `<div class="fg"><div class="fdiv">Registro de Vacunación</div>
     <div class="fi"><label>Vacuna aplicada *</label><input type="text" id="h-vacuna" placeholder="Ej: Nobivac DA2PP, Rabia, etc."></div>
     <div class="fi"><label>Laboratorio fabricante</label><input type="text" id="h-lab" placeholder="Ej: MSD Animal Health"></div>
@@ -194,7 +194,7 @@ const HIST_FORMS = {
       <select id="h-via"><option value="subcutanea">Subcutánea</option><option value="intramuscular">Intramuscular</option><option value="intranasal">Intranasal</option><option value="oral">Oral</option></select></div>
     <div class="fi"><label>Próxima vacunación *</label><input type="date" id="h-prox"></div>
     <div class="fi ff"><label>Observaciones / Reacciones</label><textarea id="h-not" placeholder="Observaciones o reacciones post-vacunación..." style="min-height:55px"></textarea></div>
-    <div class="fi ff"><label>Adjuntos (carnet, etc.)</label><input type="file" multiple id="h-files" style="font-size:12px"></div></div>`,
+    <div class="fi ff"><label>Adjuntos (carnet, etc.)</label><input type="file" multiple id="h-files" accept=".pdf,.jpg,.jpeg,.png,.webp,.gif,.doc,.docx" style="font-size:12px"></div></div>`,
   desparasitacion: `<div class="fg"><div class="fdiv">Registro de Desparasitación</div>
     <div class="fi"><label>Tipo</label>
       <select id="h-tipo-desp"><option value="interna">Interna</option><option value="externa">Externa</option><option value="ambas">Interna y Externa</option></select></div>
@@ -203,7 +203,7 @@ const HIST_FORMS = {
     <div class="fi"><label>Dosis</label><input type="text" id="h-dosis" placeholder="Dosis administrada"></div>
     <div class="fi"><label>Próximo control *</label><input type="date" id="h-prox"></div>
     <div class="fi ff"><label>Observaciones</label><textarea id="h-not" placeholder="Observaciones..." style="min-height:55px"></textarea></div>
-    <div class="fi ff"><label>Adjunto</label><input type="file" multiple id="h-files" style="font-size:12px"></div></div>`,
+    <div class="fi ff"><label>Adjunto</label><input type="file" multiple id="h-files" accept=".pdf,.jpg,.jpeg,.png,.webp,.gif,.doc,.docx" style="font-size:12px"></div></div>`,
   formula: `<div class="fg"><div class="fdiv">Fórmula Médica</div>
     <div class="fi ff"><label>Diagnóstico presuntivo y/o final *</label><textarea id="h-diag" placeholder="DIAGNÓSTICO PRESUNTIVO: ..."></textarea></div>
     <div class="fdiv">Medicamentos</div>
@@ -217,7 +217,7 @@ const HIST_FORMS = {
     </div>
     <div class="fi ff"><button type="button" class="btn btn-outline btn-sm" onclick="addMed()">+ Agregar medicamento</button></div>
     <div class="fi ff"><label>Observaciones</label><textarea id="h-not" placeholder="Recomendaciones adicionales..." style="min-height:55px"></textarea></div>
-    <div class="fi ff"><label>Adjuntos</label><input type="file" multiple id="h-files" style="font-size:12px"></div></div>`,
+    <div class="fi ff"><label>Adjuntos</label><input type="file" multiple id="h-files" accept=".pdf,.jpg,.jpeg,.png,.webp,.gif,.doc,.docx" style="font-size:12px"></div></div>`,
   cirugia: `<div class="fg"><div class="fdiv">Cirugía / Procedimiento</div>
     <div class="fi"><label>Cirugía / Procedimiento *</label><input type="text" id="h-cirugia" placeholder="Ej: Ovariohisterectomía, TPLO, Sutura..."></div>
     <div class="fi ff"><label>Descripción quirúrgica</label><textarea id="h-desc" placeholder="Descripción detallada del procedimiento..."></textarea></div>
@@ -228,7 +228,7 @@ const HIST_FORMS = {
     <div class="fi ff"><label>Complicaciones</label><textarea id="h-complic" placeholder="Complicaciones intra o postoperatorias..." style="min-height:55px"></textarea></div>
     <div class="fi ff"><label>Observaciones</label><textarea id="h-not" placeholder="Observaciones..." style="min-height:50px"></textarea></div>
     <div class="fi"><label>Próxima revisión</label><input type="date" id="h-prox"></div>
-    <div class="fi ff"><label>Adjuntos (imágenes, consentimiento)</label><input type="file" multiple id="h-files" style="font-size:12px"></div></div>`,
+    <div class="fi ff"><label>Adjuntos (imágenes, consentimiento)</label><input type="file" multiple id="h-files" accept=".pdf,.jpg,.jpeg,.png,.webp,.gif,.doc,.docx" style="font-size:12px"></div></div>`,
   laboratorio: `<div class="fg"><div class="fdiv">Examen de Laboratorio</div>
     <div id="lab-list">
       <div class="lab-item fg" style="border:1px solid var(--g200);border-radius:8px;padding:10px;margin-bottom:8px">
@@ -246,7 +246,7 @@ const HIST_FORMS = {
     <div class="fi ff"><label>Signos clínicos</label><textarea id="h-desc" placeholder="Signos clínicos que motivaron el estudio..."></textarea></div>
     <div class="fi ff"><label>Diagnóstico presuntivo</label><textarea id="h-diag" placeholder="Diagnóstico presuntivo..."></textarea></div>
     <div class="fi ff"><label>Tipo de estudio / Hallazgos</label><textarea id="h-estudio" placeholder="Región evaluada, hallazgos, interpretación..."></textarea></div>
-    <div class="fi ff"><label>Adjuntos / Resultados</label><input type="file" multiple id="h-files" style="font-size:12px"></div>
+    <div class="fi ff"><label>Adjuntos / Resultados</label><input type="file" multiple id="h-files" accept=".pdf,.jpg,.jpeg,.png,.webp,.gif,.doc,.docx" style="font-size:12px"></div>
     <div class="fi ff"><label>Observaciones</label><textarea id="h-not" placeholder="Observaciones..." style="min-height:50px"></textarea></div></div>`,
   hospitalizacion: `<div class="fg"><div class="fdiv">Hospitalización / Ambulatorio</div>
     <div class="fi"><label>Tipo *</label>
@@ -305,7 +305,7 @@ const HIST_FORMS = {
     <div class="fi"><label>Motivo</label>
       <select id="h-motivo-seg"><option value="no_especificado">No especificado</option><option value="revision_herida">Revisión herida</option><option value="retiro_puntos">Retiro de puntos</option><option value="control_medicacion">Control medicación</option><option value="evolucion">Evaluación evolución</option></select></div>
     <div class="fi ff"><label>Detalles del seguimiento *</label><textarea id="h-desc" placeholder="Estado actual del paciente, evolución..."></textarea></div>
-    <div class="fi ff"><label>Adjuntos (fotos, exámenes)</label><input type="file" multiple id="h-files" style="font-size:12px"></div>
+    <div class="fi ff"><label>Adjuntos (fotos, exámenes)</label><input type="file" multiple id="h-files" accept=".pdf,.jpg,.jpeg,.png,.webp,.gif,.doc,.docx" style="font-size:12px"></div>
     <div class="fi"><label>Próximo control</label><input type="date" id="h-prox"></div>
     <div class="fdiv">Examen físico general</div>
     <div class="fi"><label>Actitud</label>
@@ -328,13 +328,13 @@ const HIST_FORMS = {
     <div class="fi"><label>¿Requiere firma?</label>
       <select id="h-firma"><option value="si">Sí requiere</option><option value="no">No requiere</option></select></div>
     <div class="fi ff"><label>Contenido / Descripción</label><textarea id="h-desc" placeholder="Contenido del documento o descripción..." style="min-height:100px"></textarea></div>
-    <div class="fi ff"><label>Adjunto (PDF, imagen del documento)</label><input type="file" multiple id="h-files" style="font-size:12px"></div>
+    <div class="fi ff"><label>Adjunto (PDF, imagen del documento)</label><input type="file" multiple id="h-files" accept=".pdf,.jpg,.jpeg,.png,.webp,.gif,.doc,.docx" style="font-size:12px"></div>
     <div class="fi ff"><label>Observaciones</label><textarea id="h-not" placeholder="Observaciones..." style="min-height:50px"></textarea></div></div>`,
   remision: `<div class="fg"><div class="fdiv">Remisión</div>
     <div class="fi"><label>Centro veterinario destino *</label><input type="text" id="h-destino" placeholder="Clínica, laboratorio o centro destino"></div>
     <div class="fi ff"><label>Procedimiento / Razón de remisión *</label><textarea id="h-desc" placeholder="Procedimientos a remitir, exámenes, hospitalización..."></textarea></div>
     <div class="fi ff"><label>Observaciones / Recomendaciones</label><textarea id="h-not" placeholder="Detalles, recomendaciones al centro de destino..." style="min-height:60px"></textarea></div>
-    <div class="fi ff"><label>Adjuntos (historia clínica, exámenes)</label><input type="file" multiple id="h-files" style="font-size:12px"></div></div>`,
+    <div class="fi ff"><label>Adjuntos (historia clínica, exámenes)</label><input type="file" multiple id="h-files" accept=".pdf,.jpg,.jpeg,.png,.webp,.gif,.doc,.docx" style="font-size:12px"></div></div>`,
   cita: `<div class="fg"><div class="fdiv">Registro de Cita</div>
     <div class="fi"><label>Tipo de cita *</label>
       <select id="h-tipo-cita"><option value="consulta">Consulta</option><option value="vacunacion">Vacunación</option><option value="desparasitacion">Desparasitación</option><option value="cirugia">Cirugía</option><option value="control">Control</option><option value="peluqueria">Peluquería</option><option value="otro">Otro</option></select></div>
