@@ -507,7 +507,8 @@ async function saveHist() {
   const h = { id: 'h' + Date.now(), mid: currentPet, ...collectHistFields() };
   const archivos = await collectAndUploadFiles(h.tipo);
   if (archivos.length) h.archivos = archivos;
-  const hist = DB.get('hist'); hist.push(h); DB.set('hist', hist);
+  const hist = DB.get('hist'); hist.push(h);
+  await DB.set('hist', hist);
   closeM('m-hist'); toast('Entrada guardada ✓', 'ok');
   showHT(h.tipo); buildHistNav(); rHistList(); rStats();
 }
@@ -538,7 +539,7 @@ function editHist(id) {
       const newFiles = await collectAndUploadFiles(updated.tipo);
       if (newFiles.length) updated.archivos = [...(hist[idx].archivos || []), ...newFiles];
       hist[idx] = updated;
-      DB.set('hist', hist);
+      await DB.set('hist', hist);
     }
     closeM('m-hist'); toast('Entrada actualizada ✓', 'ok');
     showHT(hist[idx]?.tipo); buildHistNav();
@@ -565,7 +566,7 @@ async function deleteArchivoHist(histId, fileUrl) {
   const hist = DB.get('hist'), h = hist.find(x => x.id === histId);
   if (!h) return;
   h.archivos = (h.archivos || []).filter(f => f.url !== fileUrl);
-  DB.set('hist', hist);
+  await DB.set('hist', hist);
   showHT(h.tipo); buildHistNav();
   toast('Archivo eliminado ✓', 'ok');
 }

@@ -2,11 +2,14 @@
 const DB = {
   get: k => { try { return JSON.parse(localStorage.getItem('vv_' + k)) || [] } catch { return [] } },
 
-  // Escribe localmente y sincroniza con Supabase en segundo plano
+  // Escribe localmente y sube a Supabase. Retorna la promise para poder awaitarla.
   set: (k, v) => {
     localStorage.setItem('vv_' + k, JSON.stringify(v));
     const sb = getSB();
-    if (sb) sb.from('vv_store').upsert({ key: k, data: v, updated_at: new Date().toISOString() }).catch(() => {});
+    if (!sb) return Promise.resolve();
+    return sb.from('vv_store')
+      .upsert({ key: k, data: v, updated_at: new Date().toISOString() })
+      .catch(e => console.warn('Supabase sync error [' + k + ']:', e));
   },
 
   // Al iniciar sesión: carga todos los datos de Supabase al localStorage
