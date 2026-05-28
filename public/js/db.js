@@ -9,33 +9,41 @@ const DB = {
     if (!sb) return Promise.resolve();
     return sb.from('vv_store')
       .upsert({ key: k, data: v, updated_at: new Date().toISOString() })
-      .catch(e => console.warn('Supabase sync error [' + k + ']:', e));
+      .then(({ error }) => { if (error) console.warn('Supabase sync error [' + k + ']:', error); });
   },
 
-  // Al iniciar sesión: carga todos los datos de Supabase al localStorage
-  // Si Supabase está vacío y hay datos locales, los sube (migración primer uso)
+  // Al iniciar sesión: sincroniza inteligentemente — usa siempre la fuente con más datos
+  // y sube al otro si está desactualizado. Garantiza que nunca se pierdan datos.
   loadAll: async () => {
     const sb = getSB();
     if (!sb) return;
+    const keys = ['props', 'mas', 'hist', 'segs', 'procs', 'cots', 'recs'];
     try {
       const { data, error } = await sb.from('vv_store').select('key,data');
       if (error) throw error;
-      if (data && data.length) {
-        data.forEach(r => localStorage.setItem('vv_' + r.key, JSON.stringify(r.data)));
-      } else {
-        // Supabase vacío → subir datos locales existentes (primer computador)
-        const keys = ['props', 'mas', 'hist', 'segs', 'procs', 'cots', 'recs'];
-        for (const k of keys) {
-          try {
-            const raw = localStorage.getItem('vv_' + k);
-            if (!raw) continue;
-            const v = JSON.parse(raw);
-            if (Array.isArray(v) && v.length > 0)
-              await sb.from('vv_store').upsert({ key: k, data: v, updated_at: new Date().toISOString() });
-          } catch (_) {}
+
+      const sbMap = {};
+      if (data) data.forEach(r => { sbMap[r.key] = r.data; });
+
+      for (const k of keys) {
+        const localRaw = localStorage.getItem('vv_' + k);
+        const localData = localRaw ? JSON.parse(localRaw) : [];
+        const sbData = sbMap[k] || [];
+
+        const localLen = Array.isArray(localData) ? localData.length : 0;
+        const sbLen   = Array.isArray(sbData)    ? sbData.length    : 0;
+
+        if (sbLen >= localLen) {
+          // Supabase igual o más completo → usar Supabase
+          localStorage.setItem('vv_' + k, JSON.stringify(sbData));
+        } else {
+          // localStorage más completo → subir a Supabase y seguir usando local
+          await sb.from('vv_store')
+            .upsert({ key: k, data: localData, updated_at: new Date().toISOString() })
+            .then(({ error }) => { if (error) console.warn('Supabase push error [' + k + ']:', error); });
         }
       }
-    } catch (e) { console.warn('Supabase sync:', e); }
+    } catch (e) { console.warn('Supabase loadAll:', e); }
   }
 };
 
