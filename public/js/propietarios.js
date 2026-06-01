@@ -1,4 +1,14 @@
 // Módulo: Propietarios
+const CRM_URL = 'https://vitabot-vitalvet-production.up.railway.app';
+
+function syncPropToCRM(prop) {
+  const mascotas = DB.get('mas').filter(m => m.pid === prop.id);
+  fetch(CRM_URL + '/api/crm/sync-patient', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ propietario: prop, mascotas })
+  }).catch(() => {}); // fire-and-forget: nunca bloquea la app
+}
 function saveProp() {
   const ced = document.getElementById('p-ced').value.trim(), nom = document.getElementById('p-nom').value.trim();
   if (!ced || !nom) { toast('Cédula y nombre son obligatorios', 'err'); return }
@@ -15,6 +25,7 @@ function saveProp() {
   ['p-ced', 'p-nom', 'p-tel', 'p-email', 'p-dir', 'p-cont', 'p-talt'].forEach(id => { const el = document.getElementById(id); if (el) el.value = '' });
   document.getElementById('p-ciu').value = 'Barbosa';
   updSelects(); rProp(); rStats(); toast('Propietario guardado ✓', 'ok');
+  syncPropToCRM(np);
 }
 
 function rProp(q) {
@@ -76,6 +87,7 @@ function updateProp() {
   p.email = document.getElementById('ep-email').value.trim(); p.direccion = document.getElementById('ep-dir').value.trim();
   p.ciudad = document.getElementById('ep-ciu').value.trim(); p.contacto = document.getElementById('ep-cont').value.trim();
   DB.set('props', props); closeM('m-edit-prop'); rProp(); updSelects(); toast('Propietario actualizado ✓', 'ok');
+  syncPropToCRM(p);
 }
 
 function abrirHist(pid) {
