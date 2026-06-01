@@ -12,38 +12,37 @@ const DB = {
       .then(({ error }) => { if (error) console.warn('Supabase sync error [' + k + ']:', error); });
   },
 
-  // Al iniciar sesión: sincroniza inteligentemente — usa siempre la fuente con más datos
-  // y sube al otro si está desactualizado. Garantiza que nunca se pierdan datos.
+  // Al iniciar sesión: sincroniza — fetcha cada key por separado para manejar
+  // respuestas grandes (hist ~1MB) sin riesgo de timeout global.
   loadAll: async () => {
     const sb = getSB();
     if (!sb) return;
     const keys = ['props', 'mas', 'hist', 'segs', 'procs', 'cots', 'recs'];
-    try {
-      const { data, error } = await sb.from('vv_store').select('key,data');
-      if (error) throw error;
+    for (const k of keys) {
+      try {
+        const { data: row, error } = await sb.from('vv_store')
+          .select('data').eq('key', k).maybeSingle();
+        if (error) { console.warn('Supabase loadAll [' + k + ']:', error); continue; }
 
-      const sbMap = {};
-      if (data) data.forEach(r => { sbMap[r.key] = r.data; });
-
-      for (const k of keys) {
+        const sbData   = (row && Array.isArray(row.data)) ? row.data : null;
         const localRaw = localStorage.getItem('vv_' + k);
         const localData = localRaw ? JSON.parse(localRaw) : [];
-        const sbData = sbMap[k] || [];
 
+        const sbLen    = sbData ? sbData.length : -1;
         const localLen = Array.isArray(localData) ? localData.length : 0;
-        const sbLen   = Array.isArray(sbData)    ? sbData.length    : 0;
 
-        if (sbLen >= localLen) {
-          // Supabase igual o más completo → usar Supabase
+        if (sbData !== null && sbLen >= localLen) {
+          // Supabase tiene datos válidos e igual o más completo → usar Supabase
           localStorage.setItem('vv_' + k, JSON.stringify(sbData));
-        } else {
-          // localStorage más completo → subir a Supabase y seguir usando local
+        } else if (sbData !== null && localLen > sbLen) {
+          // localStorage más completo → subir a Supabase
           await sb.from('vv_store')
             .upsert({ key: k, data: localData, updated_at: new Date().toISOString() })
-            .then(({ error }) => { if (error) console.warn('Supabase push error [' + k + ']:', error); });
+            .then(({ error }) => { if (error) console.warn('Supabase push [' + k + ']:', error); });
         }
-      }
-    } catch (e) { console.warn('Supabase loadAll:', e); }
+        // Si sbData === null (sin acceso o key no existe), conserva localStorage sin tocar Supabase
+      } catch (e) { console.warn('Supabase loadAll [' + k + ']:', e); }
+    }
   }
 };
 
