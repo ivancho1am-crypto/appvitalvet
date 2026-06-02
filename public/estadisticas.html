@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VitalVet · Estadísticas Clínicas</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --green:#059669;--green-lt:#d1fae5;--green-dk:#047857;
+  --teal:#0891b2;--teal-lt:#cffafe;
+  --orange:#d97706;--purple:#7c3aed;--pink:#db2777;--red:#ef4444;--blue:#3b82f6;
+  --g50:#f9fafb;--g100:#f3f4f6;--g200:#e5e7eb;--g400:#9ca3af;--g600:#4b5563;--g800:#1f2937;
+  --sidebar-w:220px;
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--g50);color:var(--g800);display:flex;min-height:100vh}
+
+/* ── SIDEBAR ──────────────────────────────────────── */
+#sidebar{
+  width:var(--sidebar-w);min-width:var(--sidebar-w);background:#0f1a2e;
+  display:flex;flex-direction:column;position:fixed;top:0;left:0;height:100vh;z-index:100;
+  overflow-y:auto;
+}
+.sb-logo{padding:24px 20px 16px;border-bottom:1px solid rgba(255,255,255,.08)}
+.sb-logo-title{color:#fff;font-size:15px;font-weight:700;letter-spacing:.3px}
+.sb-logo-sub{color:#6ee7b7;font-size:11px;margin-top:2px;font-weight:500}
+.sb-section{padding:16px 12px 4px;color:#6b7280;font-size:10px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase}
+.sb-link{
+  display:flex;align-items:center;gap:9px;padding:9px 14px;margin:1px 8px;
+  border-radius:8px;color:#cbd5e1;font-size:13px;text-decoration:none;cursor:pointer;
+  transition:background .15s,color .15s;border:none;background:none;width:calc(100% - 16px);text-align:left;
+}
+.sb-link:hover,.sb-link.active{background:rgba(5,150,105,.25);color:#6ee7b7}
+.sb-link .sb-ico{font-size:15px;width:20px;text-align:center}
+.sb-footer{margin-top:auto;padding:16px;border-top:1px solid rgba(255,255,255,.08);color:#6b7280;font-size:10px;line-height:1.6}
+.sb-badge{background:#059669;color:#fff;font-size:9px;padding:1px 6px;border-radius:10px;margin-left:auto;font-weight:700}
+
+/* ── MAIN ─────────────────────────────────────────── */
+#main{margin-left:var(--sidebar-w);flex:1;padding:0;display:flex;flex-direction:column;min-height:100vh}
+
+/* Header */
+#topbar{
+  background:#fff;border-bottom:1px solid var(--g200);
+  padding:14px 28px;display:flex;align-items:center;justify-content:space-between;
+  position:sticky;top:0;z-index:50;
+}
+.tb-title{font-size:16px;font-weight:700;color:var(--g800)}
+.tb-sub{font-size:12px;color:var(--g400);margin-top:1px}
+.tb-right{display:flex;align-items:center;gap:12px}
+.tb-badge{background:var(--green-lt);color:var(--green-dk);font-size:11px;font-weight:600;padding:4px 10px;border-radius:20px}
+.tb-updated{font-size:11px;color:var(--g400)}
+
+/* Content */
+#content{padding:24px 28px 48px;display:flex;flex-direction:column;gap:28px}
+
+/* Section headers */
+.sec-header{display:flex;align-items:center;gap:10px;margin-bottom:16px}
+.sec-icon{font-size:20px}
+.sec-title{font-size:17px;font-weight:700;color:var(--g800)}
+.sec-desc{font-size:12px;color:var(--g400);margin-left:auto}
+.sec-divider{height:3px;background:linear-gradient(90deg,var(--green),transparent);border-radius:2px;margin-bottom:20px;width:60px}
+
+/* KPI Cards */
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.kpi{background:#fff;border-radius:14px;padding:20px 22px;box-shadow:0 1px 3px rgba(0,0,0,.07);border:1px solid var(--g200);position:relative;overflow:hidden}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--c,var(--green))}
+.kpi-val{font-size:32px;font-weight:800;color:var(--c,var(--green));line-height:1;margin-bottom:4px}
+.kpi-label{font-size:12px;color:var(--g600);font-weight:500}
+.kpi-sub{font-size:11px;color:var(--g400);margin-top:4px}
+.kpi-ico{position:absolute;right:16px;top:16px;font-size:28px;opacity:.15}
+
+/* Chart cards */
+.chart-grid{display:grid;gap:16px}
+.g2{grid-template-columns:1fr 1fr}
+.g3{grid-template-columns:repeat(3,1fr)}
+.g4{grid-template-columns:repeat(4,1fr)}
+.g31{grid-template-columns:3fr 1fr}
+.g13{grid-template-columns:1fr 3fr}
+.card{background:#fff;border-radius:14px;padding:20px 22px;box-shadow:0 1px 3px rgba(0,0,0,.07);border:1px solid var(--g200)}
+.card-title{font-size:13px;font-weight:700;color:var(--g800);margin-bottom:4px;display:flex;align-items:center;gap:6px}
+.card-subtitle{font-size:11px;color:var(--g400);margin-bottom:14px}
+.chart-wrap{position:relative}
+.chart-wrap.h160{height:160px}
+.chart-wrap.h200{height:200px}
+.chart-wrap.h240{height:240px}
+.chart-wrap.h280{height:280px}
+.chart-wrap.h320{height:320px}
+
+/* Stat pills */
+.stat-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.stat-pill{background:var(--g100);border-radius:20px;padding:5px 12px;font-size:12px;display:flex;align-items:center;gap:6px}
+.stat-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.stat-val{font-weight:700;color:var(--g800)}
+.stat-lbl{color:var(--g600)}
+
+/* Table-style list */
+.rank-list{display:flex;flex-direction:column;gap:7px;margin-top:8px}
+.rank-item{display:flex;align-items:center;gap:8px;font-size:12px}
+.rank-n{width:18px;color:var(--g400);font-weight:700;text-align:right;flex-shrink:0}
+.rank-bar-wrap{flex:1;background:var(--g100);border-radius:4px;height:8px;overflow:hidden}
+.rank-bar{height:100%;border-radius:4px;background:var(--green);transition:width .5s}
+.rank-name{min-width:130px;color:var(--g700);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rank-cnt{color:var(--g400);font-size:11px;white-space:nowrap}
+
+/* Evidence callout */
+.evidence-box{background:linear-gradient(135deg,#ecfdf5,#d1fae5);border:1px solid #6ee7b7;border-radius:12px;padding:16px 20px;margin-top:16px}
+.ev-title{font-size:12px;font-weight:700;color:var(--green-dk);margin-bottom:6px;display:flex;align-items:center;gap:6px}
+.ev-list{list-style:none;display:flex;flex-direction:column;gap:4px}
+.ev-list li{font-size:12px;color:#065f46;display:flex;align-items:flex-start;gap:6px}
+.ev-list li::before{content:'→';color:var(--green);font-weight:700;flex-shrink:0;margin-top:1px}
+
+/* Spinner */
+#loading{position:fixed;inset:0;background:#fff;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:16px;z-index:1000}
+.spinner{width:40px;height:40px;border:3px solid var(--g200);border-top-color:var(--green);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+#loading p{color:var(--g600);font-size:13px}
+
+/* Responsive */
+@media(max-width:900px){
+  .kpi-row,.g2,.g3,.g4,.g31,.g13{grid-template-columns:1fr!important}
+  #sidebar{display:none}
+  #main{margin-left:0}
+}
+</style>
+</head>
+<body>
+
+<div id="loading">
+  <div style="font-size:36px">🐾</div>
+  <div class="spinner"></div>
+  <p>Cargando estadísticas clínicas…</p>
+</div>
+
+<!-- SIDEBAR -->
+<nav id="sidebar">
+  <div class="sb-logo">
+    <div style="font-size:26px;margin-bottom:6px">🐾</div>
+    <div class="sb-logo-title">VitalVet</div>
+    <div class="sb-logo-sub">Estadísticas Clínicas · 2024–2026</div>
+  </div>
+
+  <div class="sb-section">Análisis</div>
+  <button class="sb-link active" onclick="scrollTo('resumen')"><span class="sb-ico">📊</span>Resumen General</button>
+  <button class="sb-link" onclick="scrollTo('pacientes')"><span class="sb-ico">🐾</span>Distribución Pacientes</button>
+  <button class="sb-link" onclick="scrollTo('epidemiologia')"><span class="sb-ico">🔬</span>Epidemiología</button>
+  <button class="sb-link" onclick="scrollTo('preventivo')"><span class="sb-ico">💉</span>Medicina Preventiva</button>
+  <button class="sb-link" onclick="scrollTo('geografia')"><span class="sb-ico">🗺️</span>Geografía</button>
+  <button class="sb-link" onclick="scrollTo('actividad')"><span class="sb-ico">📈</span>Actividad Clínica</button>
+
+  <div class="sb-section" style="margin-top:8px">Referencia</div>
+  <a class="sb-link" href="https://appvitalvet-production.up.railway.app/" target="_blank"><span class="sb-ico">🏥</span>App Clínica</a>
+  <a class="sb-link" href="file:///Users/macbookpro/vitalcore-ia/index.html"><span class="sb-ico">🧠</span>VitaCore IA</a>
+
+  <div class="sb-footer">
+    <div>Clinica Regional Veterinaria</div>
+    <div><strong style="color:#6ee7b7">VitalVet</strong> · Barbosa, Santander</div>
+    <div style="margin-top:6px">Medicina Basada en Evidencia</div>
+    <div id="sb-updated" style="margin-top:6px;color:#374151"></div>
+  </div>
+</nav>
+
+<!-- MAIN -->
+<div id="main">
+  <div id="topbar">
+    <div>
+      <div class="tb-title">📊 Estadísticas Clínicas — VitalVet</div>
+      <div class="tb-sub">Panel de métricas · Medicina basada en evidencia · Barbosa, Santander</div>
+    </div>
+    <div class="tb-right">
+      <span class="tb-badge" id="tb-pacientes">485 pacientes</span>
+      <span class="tb-updated" id="tb-date"></span>
+    </div>
+  </div>
+
+  <div id="content">
+
+    <!-- ═══════════════════════════════════════════
+         1. RESUMEN GENERAL
+    ═══════════════════════════════════════════ -->
+    <section id="resumen">
+      <div class="sec-header"><span class="sec-icon">📊</span><span class="sec-title">Resumen General</span><span class="sec-desc">Datos totales del sistema</span></div>
+      <div class="sec-divider"></div>
+
+      <div class="kpi-row">
+        <div class="kpi" style="--c:#059669">
+          <div class="kpi-ico">🐾</div>
+          <div class="kpi-val" id="kpi-mas">485</div>
+          <div class="kpi-label">Pacientes registrados</div>
+          <div class="kpi-sub">392 caninos · 91 felinos · 4 otros</div>
+        </div>
+        <div class="kpi" style="--c:#0891b2">
+          <div class="kpi-ico">👤</div>
+          <div class="kpi-val" id="kpi-props">402</div>
+          <div class="kpi-label">Propietarios activos</div>
+          <div class="kpi-sub">1.2 mascotas promedio por tutor</div>
+        </div>
+        <div class="kpi" style="--c:#d97706">
+          <div class="kpi-ico">📋</div>
+          <div class="kpi-val" id="kpi-hist">1,310</div>
+          <div class="kpi-label">Registros clínicos</div>
+          <div class="kpi-sub">Consultas · Cirugías · Preventivo</div>
+        </div>
+        <div class="kpi" style="--c:#7c3aed">
+          <div class="kpi-ico">🔬</div>
+          <div class="kpi-val">12</div>
+          <div class="kpi-label">Tipos de atención</div>
+          <div class="kpi-sub">Consulta · Cirugía · Lab · +9 más</div>
+        </div>
+      </div>
+
+      <!-- Overview charts -->
+      <div class="chart-grid g2" style="margin-top:16px">
+        <div class="card">
+          <div class="card-title">🏥 Distribución de Registros por Tipo</div>
+          <div class="card-subtitle">Total de entradas en historial clínico</div>
+          <div class="chart-wrap h240"><canvas id="ch-tipos"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="card-title">📅 Actividad Clínica — Últimos 18 meses</div>
+          <div class="card-subtitle">Consultas registradas por mes</div>
+          <div class="chart-wrap h240"><canvas id="ch-timeline"></canvas></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════
+         2. DISTRIBUCIÓN PACIENTES
+    ═══════════════════════════════════════════ -->
+    <section id="pacientes" style="padding-top:8px">
+      <div class="sec-header"><span class="sec-icon">🐾</span><span class="sec-title">Distribución de Pacientes</span><span class="sec-desc">Epidemiología descriptiva poblacional</span></div>
+      <div class="sec-divider"></div>
+
+      <div class="chart-grid g4">
+        <div class="card">
+          <div class="card-title">🐕 Especie</div>
+          <div class="card-subtitle">Distribución de la especie</div>
+          <div class="chart-wrap h160"><canvas id="ch-especie"></canvas></div>
+          <div class="stat-row">
+            <div class="stat-pill"><div class="stat-dot" style="background:#059669"></div><span class="stat-val">80.8%</span><span class="stat-lbl">Canino</span></div>
+            <div class="stat-pill"><div class="stat-dot" style="background:#0891b2"></div><span class="stat-val">18.8%</span><span class="stat-lbl">Felino</span></div>
+            <div class="stat-pill"><div class="stat-dot" style="background:#d97706"></div><span class="stat-val">0.8%</span><span class="stat-lbl">Lagomorfo</span></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">⚥ Género</div>
+          <div class="card-subtitle">Macho vs Hembra</div>
+          <div class="chart-wrap h160"><canvas id="ch-genero"></canvas></div>
+          <div class="stat-row">
+            <div class="stat-pill"><div class="stat-dot" style="background:#3b82f6"></div><span class="stat-val">47.2%</span><span class="stat-lbl">Macho</span></div>
+            <div class="stat-pill"><div class="stat-dot" style="background:#ec4899"></div><span class="stat-val">52.8%</span><span class="stat-lbl">Hembra</span></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">✂️ E. Reproductivo</div>
+          <div class="card-subtitle">Esterilización/Castración</div>
+          <div class="chart-wrap h160"><canvas id="ch-repro"></canvas></div>
+          <div class="stat-row">
+            <div class="stat-pill"><div class="stat-dot" style="background:#059669"></div><span class="stat-val">36.8%</span><span class="stat-lbl">Esterilizado</span></div>
+            <div class="stat-pill"><div class="stat-dot" style="background:#f59e0b"></div><span class="stat-val">63.2%</span><span class="stat-lbl">No Esterilizado</span></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">🎂 Grupos de Edad</div>
+          <div class="card-subtitle">Distribución etaria</div>
+          <div class="chart-wrap h160"><canvas id="ch-edad"></canvas></div>
+          <div class="stat-row">
+            <div class="stat-pill"><span class="stat-val">487</span><span class="stat-lbl">con fecha nacimiento</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="chart-grid g2" style="margin-top:16px">
+        <div class="card">
+          <div class="card-title">🐕 Top 10 Razas más frecuentes</div>
+          <div class="card-subtitle">Caninos y felinos · Total de pacientes</div>
+          <div class="rank-list" id="rank-razas"></div>
+        </div>
+        <div class="card">
+          <div class="card-title">🥣 Tipo de Alimentación</div>
+          <div class="card-subtitle">Dieta registrada en ficha clínica</div>
+          <div class="chart-wrap h220"><canvas id="ch-alimento"></canvas></div>
+        </div>
+      </div>
+
+      <div class="evidence-box">
+        <div class="ev-title">🔬 Hallazgos para Medicina Basada en Evidencia</div>
+        <ul class="ev-list">
+          <li><strong>63% de los pacientes</strong> no están esterilizados — oportunidad para campañas de esterilización preventiva y reducción de enfermedades reproductivas (piometra, tumores mamarios)</li>
+          <li><strong>Pinscher (12%) y Criollos (23%)</strong> son las razas dominantes — requieren protocolos adaptados a su perfil sanitario local</li>
+          <li><strong>Grupo etario 1–7 años (59%)</strong> representa la población más activa — ideal para programas de medicina preventiva sostenida</li>
+          <li><strong>Dieta mixta (45%)</strong> es la más común — base para recomendaciones nutricionales personalizadas por raza y edad</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════
+         3. EPIDEMIOLOGÍA CLÍNICA
+    ═══════════════════════════════════════════ -->
+    <section id="epidemiologia" style="padding-top:8px">
+      <div class="sec-header"><span class="sec-icon">🔬</span><span class="sec-title">Epidemiología Clínica</span><span class="sec-desc">Patologías · Medicamentos · Procedimientos</span></div>
+      <div class="sec-divider"></div>
+
+      <div class="chart-grid g2">
+        <div class="card">
+          <div class="card-title">⚕️ Procedimientos Quirúrgicos más frecuentes</div>
+          <div class="card-subtitle">141 cirugías registradas · Tipos de intervención</div>
+          <div class="rank-list" id="rank-cirugia"></div>
+        </div>
+        <div class="card">
+          <div class="card-title">💊 Medicamentos más prescritos</div>
+          <div class="card-subtitle">Principios activos en fórmulas médicas (167 registros)</div>
+          <div class="rank-list" id="rank-meds"></div>
+        </div>
+      </div>
+
+      <div class="chart-grid g2" style="margin-top:16px">
+        <div class="card">
+          <div class="card-title">🏥 Motivos de Consulta</div>
+          <div class="card-subtitle">205 consultas · Motivo principal registrado</div>
+          <div class="chart-wrap h240"><canvas id="ch-motivos"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="card-title">📋 Distribución de Atenciones por Tipo</div>
+          <div class="card-subtitle">Todos los registros en historial clínico</div>
+          <div class="chart-wrap h240"><canvas id="ch-tipos2"></canvas></div>
+        </div>
+      </div>
+
+      <div class="evidence-box">
+        <div class="ev-title">🔬 Hallazgos Quirúrgicos — Evidencia Clínica</div>
+        <ul class="ev-list">
+          <li><strong>OVH (34% de cirugías)</strong> es el procedimiento más frecuente — confirma alta prevalencia de hembras no esterilizadas y demanda en medicina reproductiva</li>
+          <li><strong>Detartraje (14%)</strong> indica alta prevalencia de enfermedad periodontal — oportunidad para protocolos de salud oral preventiva</li>
+          <li><strong>Mastectomía + Piometra (5.7%)</strong> refleja las consecuencias de baja tasa de esterilización — correlación directa con el 63% sin esterilizar</li>
+          <li><strong>Diciclin + Prednisolona + Meloxicam</strong> son los 3 medicamentos más prescritos — perfil antiinflamatorio-antibiótico como patrón dominante</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════
+         4. MEDICINA PREVENTIVA
+    ═══════════════════════════════════════════ -->
+    <section id="preventivo" style="padding-top:8px">
+      <div class="sec-header"><span class="sec-icon">💉</span><span class="sec-title">Medicina Preventiva</span><span class="sec-desc">Cobertura vacunal · Desparasitación · Laboratorio</span></div>
+      <div class="sec-divider"></div>
+
+      <div class="kpi-row">
+        <div class="kpi" style="--c:#059669">
+          <div class="kpi-ico">💉</div>
+          <div class="kpi-val">232</div>
+          <div class="kpi-label">Vacunaciones aplicadas</div>
+          <div class="kpi-sub">48% de la población total</div>
+        </div>
+        <div class="kpi" style="--c:#0891b2">
+          <div class="kpi-ico">🪱</div>
+          <div class="kpi-val">199</div>
+          <div class="kpi-label">Desparasitaciones</div>
+          <div class="kpi-sub">Interna + Externa</div>
+        </div>
+        <div class="kpi" style="--c:#d97706">
+          <div class="kpi-ico">🧪</div>
+          <div class="kpi-val">234</div>
+          <div class="kpi-label">Exámenes de laboratorio</div>
+          <div class="kpi-sub">Hemograma, Bioquímica, otros</div>
+        </div>
+        <div class="kpi" style="--c:#7c3aed">
+          <div class="kpi-ico">📸</div>
+          <div class="kpi-val">10</div>
+          <div class="kpi-label">Imágenes diagnósticas</div>
+          <div class="kpi-sub">Rx, Ecografía</div>
+        </div>
+      </div>
+
+      <div class="chart-grid g2" style="margin-top:16px">
+        <div class="card">
+          <div class="card-title">💉 Vacunas más aplicadas</div>
+          <div class="card-subtitle">232 registros de vacunación · Protocolos Nobivac®</div>
+          <div class="rank-list" id="rank-vacunas"></div>
+        </div>
+        <div class="card">
+          <div class="card-title">🪱 Productos de Desparasitación</div>
+          <div class="card-subtitle">199 desparasitaciones registradas</div>
+          <div class="rank-list" id="rank-desp"></div>
+        </div>
+      </div>
+
+      <div class="evidence-box">
+        <div class="ev-title">🔬 Hallazgos Preventivos — Evidencia Clínica</div>
+        <ul class="ev-list">
+          <li><strong>Nobivac DHPPi (23%)</strong> es la vacuna más aplicada — protocolo core WSAVA confirmado como estándar en la clínica</li>
+          <li><strong>Solo 48% de pacientes</strong> tiene registro de vacunación — sugerir programa activo de recordatorios para los 252 sin registro</li>
+          <li><strong>234 laboratorios</strong> representa el mayor volumen individual — el diagnóstico confirmado por laboratorio es práctica frecuente</li>
+          <li><strong>Desparasitación trimestral</strong> — Endogard + Credelio son los productos estándar usados en la clínica</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════
+         5. GEOGRAFÍA
+    ═══════════════════════════════════════════ -->
+    <section id="geografia" style="padding-top:8px">
+      <div class="sec-header"><span class="sec-icon">🗺️</span><span class="sec-title">Geografía y Captación</span><span class="sec-desc">Distribución territorial · Fuentes de referencia</span></div>
+      <div class="sec-divider"></div>
+
+      <div class="chart-grid g2">
+        <div class="card">
+          <div class="card-title">📍 Distribución Geográfica de Pacientes</div>
+          <div class="card-subtitle">Ciudad de residencia del propietario · Top 10 municipios</div>
+          <div class="chart-wrap h280"><canvas id="ch-ciudades"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="card-title">🎯 Fuente de Captación</div>
+          <div class="card-subtitle">¿Cómo llegaron los clientes? · 402 propietarios</div>
+          <div class="chart-wrap h200"><canvas id="ch-fuente"></canvas></div>
+          <div class="stat-row" style="margin-top:14px">
+            <div class="stat-pill"><div class="stat-dot" style="background:#059669"></div><span class="stat-val">35%</span><span class="stat-lbl">Publicidad física</span></div>
+            <div class="stat-pill"><div class="stat-dot" style="background:#0891b2"></div><span class="stat-val">33%</span><span class="stat-lbl">Referidos</span></div>
+            <div class="stat-pill"><div class="stat-dot" style="background:#d97706"></div><span class="stat-val">20%</span><span class="stat-lbl">Sin registro</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="evidence-box">
+        <div class="ev-title">🔬 Hallazgos Geográficos — Estrategia Clínica</div>
+        <ul class="ev-list">
+          <li><strong>Barbosa (69% de pacientes)</strong> es el núcleo de la demanda — confirma posicionamiento local sólido en el municipio sede</li>
+          <li><strong>Puente Nacional + Moniquirá (12%)</strong> representan mercados de expansión con demanda ya activa — considerar telemedicina o jornadas rurales</li>
+          <li><strong>68% via publicidad física + referidos</strong> — estrategia de recomendación boca a boca altamente efectiva; digitalización puede ampliar el alcance</li>
+          <li><strong>Bogotá (10 pacientes)</strong> sugiere casos de alta complejidad referidos desde la capital — potenciar como centro de referencia regional</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════
+         6. ACTIVIDAD CLÍNICA
+    ═══════════════════════════════════════════ -->
+    <section id="actividad" style="padding-top:8px">
+      <div class="sec-header"><span class="sec-icon">📈</span><span class="sec-title">Actividad Clínica</span><span class="sec-desc">Evolución temporal · Volumen de atenciones</span></div>
+      <div class="sec-divider"></div>
+
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-title">📅 Evolución de Consultas — Nov 2024 a Jun 2026</div>
+        <div class="card-subtitle">Número de consultas registradas por mes · Tendencia de crecimiento</div>
+        <div class="chart-wrap h280"><canvas id="ch-timeline2"></canvas></div>
+      </div>
+
+      <div class="chart-grid g2">
+        <div class="card">
+          <div class="card-title">⚖️ Peso Promedio por Especie y Raza</div>
+          <div class="card-subtitle">Datos de peso registrado en ficha clínica</div>
+          <div class="chart-wrap h220"><canvas id="ch-peso"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="card-title">📊 Resumen de Indicadores Clave</div>
+          <div class="card-subtitle">Métricas de gestión clínica</div>
+          <div class="rank-list" style="margin-top:8px" id="rank-kpis"></div>
+        </div>
+      </div>
+
+      <div class="evidence-box" style="margin-top:16px">
+        <div class="ev-title">📈 Tendencias y Proyecciones</div>
+        <ul class="ev-list">
+          <li><strong>Crecimiento sostenido Feb–Mar 2026</strong> (22–24 consultas/mes) sugiere consolidación de la clínica — base para proyección de 300+ consultas anuales</li>
+          <li><strong>1.2 mascotas por propietario</strong> — oportunidad de venta cruzada de servicios preventivos por núcleo familiar</li>
+          <li><strong>Ratio consulta:cirugía = 1.4:1</strong> — alta complejidad promedio indica perfil de clínica de nivel 2–3</li>
+          <li><strong>234 laboratorios vs 10 imágenes</strong> — oportunidad de equipar con ecógrafo/Rx para reducir derivaciones externas</li>
+        </ul>
+      </div>
+    </section>
+
+  </div><!-- /content -->
+</div><!-- /main -->
+
+<script>
+// ── DATOS (procesados desde Supabase vv_store) ─────────────────────────────
+const DATA = {
+  mascotas: 485, propietarios: 402, historial: 1310,
+  especies:    { canino:392, felino:91, lagomorfo:4 },
+  generos:     { macho:230, hembra:257 },
+  repro:       { esterilizado:178, no_esterilizado:305 },
+  grupos_edad: { '< 1 año':44, '1–3 años':152, '3–7 años':133, '7–12 años':112, '> 12 años':46 },
+  razas_top: [
+    ['Criollo(a)',114],['Pinscher',58],['Mestizo',46],['Cruce',26],['Shih Tzu',24],
+    ['French Poodle',20],['Bulldog Francés',18],['Cocker',18],['Labrador',16],['Schnauzer',15]
+  ],
+  alimentos: { 'Dieta Mixta':220, 'Concentrado':69, 'N/D':130, 'Natural':6, 'Comercial':5 },
+  tipos_hist: {
+    'Laboratorio':234,'Vacunación':232,'Consulta':205,'Desparasitación':199,
+    'Fórmula Médica':167,'Cirugía':141,'Seguimiento':51,'Hospitalización':27,
+    'Documento':23,'Orden':17,'Imagen':10,'Remisión':4
+  },
+  cirugias: [
+    ['OVH (Ovariohisterectomía)',48],['Orquiectomía / OQH',19],['Detartraje Profilaxis',13],
+    ['Detartraje + E.Periodontal',7],['Mastectomía Parcial',4],['Piometra',4],
+    ['Estafilectomía',2],['Otohematoma',2],['Laparotomía Exploratoria',2],['Otros',40]
+  ],
+  medicamentos: [
+    ['Diciclin / Dicilin',51],['Prednisolona',32],['Nicilan',31],['Meloxicam',22],
+    ['Azimelox',14],['Orenda',10],['Dolomex',9],['Gentax Ótico',8]
+  ],
+  vacunas: [
+    ['Nobivac DHPPi',53],['Nobivac® Puppy DP',30],['Nobivac® RL',30],
+    ['Canigen MHA2 PPi/L',24],['Feligen® CRP',19],['Nobivac® Rabia',16],
+    ['Parvigen',9],['Rabigen Mono',8]
+  ],
+  desparasitantes: [
+    ['Endogard',80],['Credelio',72],['NexGard Spectra',18],['Rondel',8],['Petsantel',5]
+  ],
+  motivos: [
+    ['Consulta general',179],['Urgencias',6],['Radiografía (Rx)',4],
+    ['Esterilización',2],['Ecografía',2],['Chequeo Preventivo',2]
+  ],
+  ciudades: [
+    ['Barbosa',277],['Puente Nacional',26],['Moniquirá',22],['Guepsa',16],
+    ['Bogotá',10],['Suaita',8],['Vélez',6],['San José de Pare',5],['Tunja',4],['Otros',28]
+  ],
+  fuentes: { 'Publicidad física':141,'Referido':131,'Sin registro':80,'Otros':35,'Facebook':6,'Google':4 },
+  timeline: {
+    '2024-11':5,'2024-12':3,'2025-01':2,'2025-03':4,'2025-04':4,'2025-05':14,
+    '2025-06':4,'2025-07':7,'2025-08':11,'2025-09':20,'2025-10':14,'2025-11':11,
+    '2025-12':10,'2026-01':8,'2026-02':22,'2026-03':24,'2026-04':14,'2026-06':1
+  },
+  pesos_razas: [
+    ['Canino Criollo',12.4],['Pinscher',4.8],['Labrador',28.6],['Bulldog Francés',13.2],
+    ['Shih Tzu',5.9],['Cocker',10.8],['French Poodle',7.3],['Felino',4.1]
+  ]
+};
+
+// ── COLORES ────────────────────────────────────────────────────────────────
+const C = {
+  green:'#059669', teal:'#0891b2', orange:'#d97706', purple:'#7c3aed',
+  pink:'#db2777', red:'#ef4444', blue:'#3b82f6', yellow:'#eab308',
+  palette:['#059669','#0891b2','#d97706','#7c3aed','#db2777','#ef4444','#3b82f6','#eab308','#64748b','#14b8a6','#f97316','#84cc16']
+};
+
+// ── HELPERS ────────────────────────────────────────────────────────────────
+function fmtN(n){ return n>=1000?(n/1000).toFixed(1)+'k':n.toString() }
+const defOpts = (extra={}) => ({
+  responsive:true, maintainAspectRatio:false,
+  plugins:{ legend:{ display:false }, tooltip:{ callbacks:{} } },
+  ...extra
+});
+
+function rankList(id, data, color=C.green, maxVal=null){
+  const el = document.getElementById(id); if(!el) return;
+  const max = maxVal || Math.max(...data.map(d=>d[1]));
+  el.innerHTML = data.map(([name,val],i) =>
+    `<div class="rank-item">
+      <div class="rank-n">${i+1}</div>
+      <div class="rank-name" title="${name}">${name}</div>
+      <div class="rank-bar-wrap"><div class="rank-bar" style="width:${(val/max*100).toFixed(1)}%;background:${color}"></div></div>
+      <div class="rank-cnt">${val}</div>
+    </div>`
+  ).join('');
+}
+
+// ── CHARTS ────────────────────────────────────────────────────────────────
+function initCharts(){
+  Chart.register(ChartDataLabels);
+
+  // Distribución de tipos de historial (donut)
+  new Chart(document.getElementById('ch-tipos'), {
+    type:'doughnut',
+    data:{ labels:Object.keys(DATA.tipos_hist), datasets:[{ data:Object.values(DATA.tipos_hist), backgroundColor:C.palette, borderWidth:2, borderColor:'#fff' }] },
+    options:{ ...defOpts(), plugins:{ legend:{ display:true, position:'right', labels:{ font:{size:10}, boxWidth:10, padding:8 } }, datalabels:{ display:false } } }
+  });
+
+  // Timeline consultas
+  const tlKeys = Object.keys(DATA.timeline);
+  const tlVals = Object.values(DATA.timeline);
+  new Chart(document.getElementById('ch-timeline'), {
+    type:'line',
+    data:{ labels:tlKeys, datasets:[{ data:tlVals, borderColor:C.green, backgroundColor:'rgba(5,150,105,.1)', fill:true, tension:.4, pointRadius:4, pointBackgroundColor:C.green }] },
+    options:{ ...defOpts(), plugins:{ legend:{display:false}, datalabels:{display:false} }, scales:{ x:{ ticks:{font:{size:10},maxRotation:45} }, y:{ beginAtZero:true, ticks:{stepSize:5} } } }
+  });
+
+  // Especie (donut)
+  new Chart(document.getElementById('ch-especie'), {
+    type:'doughnut',
+    data:{ labels:['Canino','Felino','Lagomorfo'], datasets:[{ data:[392,91,4], backgroundColor:[C.green,C.teal,C.orange], borderWidth:2, borderColor:'#fff' }] },
+    options:{ ...defOpts(), cutout:'68%', plugins:{ legend:{display:false}, datalabels:{ display:true, color:'#fff', font:{weight:'bold',size:11}, formatter:(v,ctx)=>{ const tot=ctx.dataset.data.reduce((a,b)=>a+b,0); return (v/tot*100).toFixed(0)+'%'; } } } }
+  });
+
+  // Género
+  new Chart(document.getElementById('ch-genero'), {
+    type:'doughnut',
+    data:{ labels:['Macho','Hembra'], datasets:[{ data:[230,257], backgroundColor:[C.blue,C.pink], borderWidth:2, borderColor:'#fff' }] },
+    options:{ ...defOpts(), cutout:'68%', plugins:{ legend:{display:false}, datalabels:{ display:true, color:'#fff', font:{weight:'bold',size:11}, formatter:(v,ctx)=>{ const tot=487; return (v/tot*100).toFixed(0)+'%'; } } } }
+  });
+
+  // Reproductivo
+  new Chart(document.getElementById('ch-repro'), {
+    type:'doughnut',
+    data:{ labels:['Esterilizado','No Esterilizado'], datasets:[{ data:[178,305], backgroundColor:[C.green,C.orange], borderWidth:2, borderColor:'#fff' }] },
+    options:{ ...defOpts(), cutout:'68%', plugins:{ legend:{display:false}, datalabels:{ display:true, color:'#fff', font:{weight:'bold',size:11}, formatter:(v,ctx)=>{ const tot=483; return (v/tot*100).toFixed(0)+'%'; } } } }
+  });
+
+  // Grupos edad (bar)
+  new Chart(document.getElementById('ch-edad'), {
+    type:'bar',
+    data:{ labels:Object.keys(DATA.grupos_edad), datasets:[{ data:Object.values(DATA.grupos_edad), backgroundColor:[C.teal,C.green,'#10b981',C.orange,C.red], borderRadius:6 }] },
+    options:{ ...defOpts(), plugins:{ legend:{display:false}, datalabels:{ display:true, color:'#fff', font:{weight:'700',size:10}, anchor:'center', align:'center' } }, scales:{ x:{ticks:{font:{size:9}}}, y:{display:false} } }
+  });
+
+  // Razas (rank list)
+  rankList('rank-razas', DATA.razas_top, C.green);
+
+  // Alimento (donut)
+  new Chart(document.getElementById('ch-alimento'), {
+    type:'doughnut',
+    data:{
+      labels:['Dieta Mixta','Sin Dato','Concentrado','Natural','Comercial'],
+      datasets:[{ data:[220,130,69,6,5], backgroundColor:[C.green,C.palette[8],C.teal,C.orange,C.yellow], borderWidth:2, borderColor:'#fff' }]
+    },
+    options:{ ...defOpts(), plugins:{ legend:{ display:true, position:'right', labels:{font:{size:11},boxWidth:12,padding:10} }, datalabels:{ display:true, color:'#fff', font:{weight:'bold',size:11}, formatter:(v,ctx)=>{ const tot=430; return (v/tot*100).toFixed(0)+'%'; } } } }
+  });
+
+  // Cirugías y medicamentos (rank lists)
+  rankList('rank-cirugia', DATA.cirugias, C.purple);
+  rankList('rank-meds', DATA.medicamentos, C.teal);
+
+  // Motivos (bar horizontal)
+  const motLabels = DATA.motivos.map(m=>m[0]);
+  const motVals   = DATA.motivos.map(m=>m[1]);
+  new Chart(document.getElementById('ch-motivos'), {
+    type:'bar',
+    data:{ labels:motLabels, datasets:[{ data:motVals, backgroundColor:[C.green,...Array(6).fill(C.palette[8])], borderRadius:6 }] },
+    options:{ ...defOpts(), indexAxis:'y', plugins:{ legend:{display:false}, datalabels:{ display:true, color:'#374151', font:{size:10}, anchor:'end', align:'right' } }, scales:{ x:{display:false}, y:{ticks:{font:{size:11}}} } }
+  });
+
+  // Tipos 2 (bar)
+  const t2L = Object.keys(DATA.tipos_hist);
+  const t2V = Object.values(DATA.tipos_hist);
+  new Chart(document.getElementById('ch-tipos2'), {
+    type:'bar',
+    data:{ labels:t2L, datasets:[{ data:t2V, backgroundColor:C.palette, borderRadius:5 }] },
+    options:{ ...defOpts(), plugins:{ legend:{display:false}, datalabels:{ display:true, color:'#fff', font:{weight:'700',size:10}, anchor:'center', align:'center', formatter:v=>v>10?v:'' } }, scales:{ x:{ticks:{font:{size:9},maxRotation:45}}, y:{beginAtZero:true,display:false} } }
+  });
+
+  // Vacunas y desparasitantes (rank lists)
+  rankList('rank-vacunas', DATA.vacunas, C.green);
+  rankList('rank-desp', DATA.desparasitantes, C.teal);
+
+  // Ciudades (bar horizontal)
+  new Chart(document.getElementById('ch-ciudades'), {
+    type:'bar',
+    data:{
+      labels: DATA.ciudades.map(c=>c[0]),
+      datasets:[{ data:DATA.ciudades.map(c=>c[1]), backgroundColor:[C.green,...Array(9).fill(C.teal)], borderRadius:5 }]
+    },
+    options:{ ...defOpts(), indexAxis:'y', plugins:{ legend:{display:false}, datalabels:{ display:true, color:'#374151', font:{size:11,weight:'700'}, anchor:'end', align:'right' } }, scales:{ x:{display:false}, y:{ticks:{font:{size:12}}} } }
+  });
+
+  // Fuentes (doughnut)
+  new Chart(document.getElementById('ch-fuente'), {
+    type:'doughnut',
+    data:{
+      labels: Object.keys(DATA.fuentes),
+      datasets:[{ data:Object.values(DATA.fuentes), backgroundColor:[C.green,C.teal,C.palette[8],C.orange,C.blue,C.purple], borderWidth:2, borderColor:'#fff' }]
+    },
+    options:{ ...defOpts(), cutout:'60%', plugins:{ legend:{ display:true, position:'right', labels:{font:{size:10},boxWidth:10,padding:6} }, datalabels:{ display:false } } }
+  });
+
+  // Timeline grande
+  new Chart(document.getElementById('ch-timeline2'), {
+    type:'line',
+    data:{
+      labels: Object.keys(DATA.timeline),
+      datasets:[{
+        label:'Consultas', data:Object.values(DATA.timeline),
+        borderColor:C.green, backgroundColor:'rgba(5,150,105,.08)', fill:true,
+        tension:.35, pointRadius:5, pointBackgroundColor:C.green, pointBorderColor:'#fff', pointBorderWidth:2
+      }]
+    },
+    options:{
+      ...defOpts(),
+      plugins:{ legend:{display:false}, datalabels:{ display:true, color:C.green, font:{weight:'700',size:10}, align:'top', formatter:v=>v>3?v:'' } },
+      scales:{ x:{ ticks:{font:{size:11},maxRotation:45}, grid:{display:false} }, y:{ beginAtZero:true, ticks:{stepSize:5}, grid:{color:'rgba(0,0,0,.05)'} } }
+    }
+  });
+
+  // Peso por raza (bar)
+  new Chart(document.getElementById('ch-peso'), {
+    type:'bar',
+    data:{
+      labels: DATA.pesos_razas.map(p=>p[0]),
+      datasets:[{ data:DATA.pesos_razas.map(p=>p[1]), backgroundColor:C.palette, borderRadius:6 }]
+    },
+    options:{ ...defOpts(), plugins:{ legend:{display:false}, datalabels:{ display:true, color:'#fff', font:{weight:'700',size:10}, anchor:'center', align:'center', formatter:v=>v+'kg' } }, scales:{ x:{ticks:{font:{size:10},maxRotation:45}}, y:{beginAtZero:true,ticks:{callback:v=>v+'kg'}} } }
+  });
+
+  // KPIs rank
+  const kpiData = [
+    ['Total pacientes', 485, 500],
+    ['Propietarios', 402, 500],
+    ['Registros clínicos', 1310, 1500],
+    ['Consultas / mes promedio', 11, 30],
+    ['% con vacunas', 48, 100],
+    ['% esterilizados', 37, 100],
+    ['Razas registradas', 42, 100],
+    ['Municipios atendidos', 20, 50],
+  ];
+  rankList('rank-kpis', kpiData, C.green, 1500);
+}
+
+// ── SIDEBAR NAVIGATION ────────────────────────────────────────────────────
+function scrollTo(id){
+  const el = document.getElementById(id);
+  if(el){ el.scrollIntoView({ behavior:'smooth', block:'start' }); }
+  document.querySelectorAll('.sb-link').forEach(l=>l.classList.remove('active'));
+  event.currentTarget.classList.add('active');
+}
+
+// ── INIT ─────────────────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+  const now = new Date();
+  const fmt = now.toLocaleDateString('es-CO',{day:'2-digit',month:'short',year:'numeric'});
+  document.getElementById('tb-date').textContent = `Actualizado: ${fmt}`;
+  document.getElementById('sb-updated').textContent = `Última actualización: ${fmt}`;
+
+  // Hide loader and render charts
+  setTimeout(()=>{
+    document.getElementById('loading').style.display = 'none';
+    initCharts();
+  }, 600);
+
+  // Intersection observer for active sidebar link
+  const sections = ['resumen','pacientes','epidemiologia','preventivo','geografia','actividad'];
+  const obs = new IntersectionObserver(entries=>{
+    entries.forEach(e=>{
+      if(e.isIntersecting){
+        document.querySelectorAll('.sb-link').forEach(l=>l.classList.remove('active'));
+        const link = document.querySelector(`.sb-link[onclick*="${e.target.id}"]`);
+        if(link) link.classList.add('active');
+      }
+    });
+  },{ threshold:0.3 });
+  sections.forEach(id=>{ const el=document.getElementById(id); if(el) obs.observe(el); });
+});
+</script>
+</body>
+</html>
