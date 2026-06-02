@@ -16,6 +16,13 @@ const indexHtml = indexTemplate.replace('</head>', configScript + '\n</head>');
 
 app.use(express.static(path.join(__dirname, 'public')));
 
+// Explicit route for estadisticas dashboard
+app.get('/estadisticas.html', (req, res) => {
+  res.setHeader('Content-Type', 'text/html');
+  res.sendFile(path.join(__dirname, 'public', 'estadisticas.html'));
+});
+
+// SPA fallback — serve index.html for all other routes
 app.get('*', (req, res) => {
   res.setHeader('Content-Type', 'text/html');
   res.send(indexHtml);
