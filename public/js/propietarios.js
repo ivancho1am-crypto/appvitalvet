@@ -9,9 +9,12 @@ function syncPropToCRM(prop) {
     body: JSON.stringify({ propietario: prop, mascotas })
   }).catch(() => {}); // fire-and-forget: nunca bloquea la app
 }
+const CONSENT_VERSION = '2025-01';
+
 function saveProp() {
   const ced = document.getElementById('p-ced').value.trim(), nom = document.getElementById('p-nom').value.trim();
   if (!ced || !nom) { toast('Cédula y nombre son obligatorios', 'err'); return }
+  if (!document.getElementById('p-acepta').checked) { toast('El propietario debe autorizar el tratamiento de datos', 'err'); return }
   const props = DB.get('props');
   if (props.find(p => p.cedula === ced)) { toast('Esa cédula ya existe', 'err'); return }
   const np = {
@@ -19,11 +22,13 @@ function saveProp() {
     telefono: document.getElementById('p-tel').value.trim(), email: document.getElementById('p-email').value.trim(),
     direccion: document.getElementById('p-dir').value.trim(), ciudad: document.getElementById('p-ciu').value.trim() || 'Barbosa',
     como: document.getElementById('p-como').value, contacto: document.getElementById('p-cont').value.trim(),
-    talt: document.getElementById('p-talt').value.trim(), created: new Date().toLocaleDateString('es-CO')
+    talt: document.getElementById('p-talt').value.trim(), created: new Date().toLocaleDateString('es-CO'),
+    consent_at: new Date().toISOString(), consent_version: CONSENT_VERSION
   };
   props.push(np); DB.set('props', props); closeM('m-prop');
   ['p-ced', 'p-nom', 'p-tel', 'p-email', 'p-dir', 'p-cont', 'p-talt'].forEach(id => { const el = document.getElementById(id); if (el) el.value = '' });
   document.getElementById('p-ciu').value = 'Barbosa';
+  document.getElementById('p-acepta').checked = false;
   updSelects(); rProp(); rStats(); toast('Propietario guardado ✓', 'ok');
   syncPropToCRM(np);
 }
