@@ -164,13 +164,41 @@ node server.js
 
 ---
 
+## Integración bidireccional con el Portal Tutores
+
+### Bridge SaaS → Portal
+
+Cada entrada clínica guardada en `historia.js` se escribe también a `historia_clinica` vía `syncHistoriaClinica()`. El `paciente_id` (UUID) se resuelve desde `mas.paciente_id`. La función RPC `create_paciente_from_saas(p_cedula, ...)` (SECURITY DEFINER) crea el paciente en el Portal cuando el vet crea una nueva mascota cuyo propietario tiene cédula vinculada.
+
+Bridge inicial: función `bridge_mas_to_pacientes_function` vinculó 486/487 mascotas existentes con UUIDs.
+
+### Sincronización multi-dispositivo
+
+| Mecanismo | Descripción |
+|---|---|
+| **Timestamp sync** | `DB.set()` guarda `updated_at` en `vv_meta`; `DB.loadAll()` compara con `vv_store.updated_at` — gana el más reciente |
+| **Realtime** | `DB.initRealtime()` suscripción Supabase Realtime a `vv_store` — actualiza localStorage automáticamente desde otro dispositivo |
+| **Botón Sincronizar** | 🔄 en topbar — ejecuta `DB.loadAll()` + `boot()` manualmente |
+
+### Tablas Supabase usadas
+
+| Tabla | Operación | Propósito |
+|---|---|---|
+| `vv_store` | READ/WRITE | Datos principales (props, mas, hist, etc.) |
+| `historia_clinica` | WRITE | Bridge: copia de entradas clínicas con `saas_hist_id` UNIQUE |
+| `pacientes` | WRITE via RPC | Crear paciente Portal al crear mascota nueva |
+| `tutores` | READ (via RPC) | Resolver cédula → app_user_id |
+
+---
+
 ## Pendientes / Mejoras conocidas
 
 | Item | Prioridad |
 |---|---|
 | **Multi-usuario**: hoy `vv_store` no tiene `user_id` — si otro veterinario hace login, ve todos los datos | 🔴 si se abre a más usuarios |
-| **Backup automático**: `localStorage` puede perderse si el usuario limpia el navegador. La sync con Supabase es el respaldo, pero no hay schedule automático | 🟡 |
-| **Límite de datos**: `vv_store.data` es un JSON array — crece ilimitado. Si `hist` supera ~5MB, el upsert puede fallar | 🟡 con clínica grande |
+| **Portal→SaaS bidireccional**: vacunas del Portal aún no aparecen en el SaaS (solo SaaS→Portal está completo) | 🟡 próxima fase |
+| **Backup automático**: `localStorage` puede perderse si el usuario limpia el navegador | 🟡 |
+| **Límite de datos**: `vv_store.data` crece ilimitado. Si `hist` supera ~5MB el upsert puede fallar | 🟡 con clínica grande |
 | **Paginación en historias**: `hist` se carga completo en memoria al login | 🟢 cuando haya tiempo |
 
 ---
