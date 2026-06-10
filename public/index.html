@@ -20,9 +20,9 @@
       <p>Panel Administrativo · Barbosa, Santander</p>
     </div>
     <label class="lf-lbl">Usuario</label>
-    <input class="lf-in" id="lu" type="text" placeholder="admin@vitalvet.com">
+    <input class="lf-in" id="lu" type="email" placeholder="Correo electrónico" autocomplete="username">
     <label class="lf-lbl">Contraseña</label>
-    <input class="lf-in" id="lp" type="password" placeholder="••••••••">
+    <input class="lf-in" id="lp" type="password" placeholder="Contraseña" autocomplete="current-password">
     <button class="lf-btn" onclick="doLogin()">Ingresar al panel →</button>
   </div>
 </div>
@@ -44,6 +44,7 @@
         <div class="tb-av">ID</div>
         <span class="tb-uname">Iván Durán</span>
       </div>
+      <button class="tb-logout" style="background:var(--navy-m)" onclick="(async()=>{await DB.loadAll();boot();toast('Datos sincronizados ✓','ok')})()">🔄 Sincronizar</button>
       <button class="tb-logout" onclick="doLogout()">Salir</button>
     </div>
   </div>
@@ -397,8 +398,17 @@
             <option value="google">Google</option><option value="camina">Pasé por aquí</option><option value="otro">Otro</option></select></div>
         <div class="fi"><label>Contacto autorizado</label><input type="text" id="p-cont" placeholder="Nombre"></div>
         <div class="fi"><label>Teléfono alternativo</label><input type="tel" id="p-talt"></div>
-        <div class="fi ff" style="font-size:10px;color:var(--g700);padding:8px 12px;background:var(--g100);border-radius:var(--r-sm)">
-          ☑ El propietario acepta la política de tratamiento de datos y términos de la clínica VitalVet</div>
+        <div class="fi ff" style="padding:10px 12px;background:var(--g100);border-radius:var(--r-sm)">
+          <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer">
+            <input type="checkbox" id="p-acepta" style="margin-top:2px;flex-shrink:0;accent-color:#2e7d32" required>
+            <span style="font-size:11px;color:var(--g700);line-height:1.5">
+              El propietario autoriza el tratamiento de sus datos personales conforme a la
+              <strong>Ley 1581 de 2012</strong> y la política de privacidad de VitalVet CRV
+              para fines de atención clínica, recordatorios y comunicaciones.
+              <em style="display:block;margin-top:4px;color:var(--g500)">(Campo obligatorio)</em>
+            </span>
+          </label>
+        </div>
       </div>
     </div>
     <div class="mf">

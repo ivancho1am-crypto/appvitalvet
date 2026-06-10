@@ -2,47 +2,72 @@
 const DB = {
   get: k => { try { return JSON.parse(localStorage.getItem('vv_' + k)) || [] } catch { return [] } },
 
-  // Escribe localmente y sube a Supabase. Retorna la promise para poder awaitarla.
   set: (k, v) => {
+    const now = new Date().toISOString();
     localStorage.setItem('vv_' + k, JSON.stringify(v));
+    const meta = JSON.parse(localStorage.getItem('vv_meta') || '{}');
+    meta[k] = now;
+    localStorage.setItem('vv_meta', JSON.stringify(meta));
     const sb = getSB();
     if (!sb) return Promise.resolve();
     return sb.from('vv_store')
-      .upsert({ key: k, data: v, updated_at: new Date().toISOString() })
+      .upsert({ key: k, data: v, updated_at: now })
       .then(({ error }) => { if (error) console.warn('Supabase sync error [' + k + ']:', error); });
   },
 
-  // Al iniciar sesión: sincroniza — fetcha cada key por separado para manejar
-  // respuestas grandes (hist ~1MB) sin riesgo de timeout global.
+  // Al iniciar sesión: sincroniza usando updated_at — gana el más reciente.
   loadAll: async () => {
     const sb = getSB();
     if (!sb) return;
     const keys = ['props', 'mas', 'hist', 'segs', 'procs', 'cots', 'recs'];
+    const meta = JSON.parse(localStorage.getItem('vv_meta') || '{}');
     for (const k of keys) {
       try {
         const { data: row, error } = await sb.from('vv_store')
-          .select('data').eq('key', k).maybeSingle();
+          .select('data, updated_at').eq('key', k).maybeSingle();
         if (error) { console.warn('Supabase loadAll [' + k + ']:', error); continue; }
 
-        const sbData   = (row && Array.isArray(row.data)) ? row.data : null;
-        const localRaw = localStorage.getItem('vv_' + k);
-        const localData = localRaw ? JSON.parse(localRaw) : [];
+        if (!row || row.data === null) continue;
 
-        const sbLen    = sbData ? sbData.length : -1;
-        const localLen = Array.isArray(localData) ? localData.length : 0;
+        const sbTs    = row.updated_at ? new Date(row.updated_at).getTime() : 0;
+        const localTs = meta[k]        ? new Date(meta[k]).getTime()        : 0;
 
-        if (sbData !== null && sbLen >= localLen) {
-          // Supabase tiene datos válidos e igual o más completo → usar Supabase
-          localStorage.setItem('vv_' + k, JSON.stringify(sbData));
-        } else if (sbData !== null && localLen > sbLen) {
-          // localStorage más completo → subir a Supabase
+        if (sbTs >= localTs) {
+          // Supabase más reciente o igual → descargar
+          localStorage.setItem('vv_' + k, JSON.stringify(row.data));
+          meta[k] = row.updated_at;
+        } else {
+          // localStorage más reciente → subir a Supabase
+          const localData = JSON.parse(localStorage.getItem('vv_' + k) || '[]');
           await sb.from('vv_store')
-            .upsert({ key: k, data: localData, updated_at: new Date().toISOString() })
+            .upsert({ key: k, data: localData, updated_at: meta[k] || new Date().toISOString() })
             .then(({ error }) => { if (error) console.warn('Supabase push [' + k + ']:', error); });
         }
-        // Si sbData === null (sin acceso o key no existe), conserva localStorage sin tocar Supabase
       } catch (e) { console.warn('Supabase loadAll [' + k + ']:', e); }
     }
+    localStorage.setItem('vv_meta', JSON.stringify(meta));
+  },
+
+  // Suscripción Realtime — actualiza localStorage automáticamente cuando otro dispositivo guarda
+  initRealtime: () => {
+    const sb = getSB();
+    if (!sb) return;
+    sb.channel('vv_store_realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'vv_store' }, payload => {
+        const row = payload.new;
+        if (!row || !row.key || row.data === undefined) return;
+        const meta    = JSON.parse(localStorage.getItem('vv_meta') || '{}');
+        const sbTs    = row.updated_at ? new Date(row.updated_at).getTime() : 0;
+        const localTs = meta[row.key]  ? new Date(meta[row.key]).getTime()  : 0;
+        if (sbTs > localTs) {
+          localStorage.setItem('vv_' + row.key, JSON.stringify(row.data));
+          meta[row.key] = row.updated_at;
+          localStorage.setItem('vv_meta', JSON.stringify(meta));
+          if (typeof boot === 'function') boot();
+          if (typeof toast === 'function') toast('🔄 Datos sincronizados desde otro dispositivo', 'info');
+        }
+      })
+      .subscribe();
   }
 };
 

@@ -5,7 +5,7 @@ function updRaza() {
   // placeholder — el campo raza es texto libre, la especie solo filtra en cotización
 }
 
-function saveMas() {
+async function saveMas() {
   const pid = document.getElementById('m-prop-sel').value, nom = document.getElementById('m-nom').value.trim(), esp = document.getElementById('m-esp').value;
   if (!pid || !nom || !esp) { toast('Propietario, nombre y especie son obligatorios', 'err'); return }
   const nm = {
@@ -17,6 +17,28 @@ function saveMas() {
     serv: document.getElementById('m-serv').checked, emoc: document.getElementById('m-emoc').checked,
     created: new Date().toLocaleDateString('es-CO')
   };
+
+  // Vincular con pacientes del Portal si existe tutor con la misma cédula
+  const sb = getSB();
+  if (sb) {
+    const prop = DB.get('props').find(p => p.id === pid);
+    if (prop && prop.cedula) {
+      try {
+        const { data: pacienteId } = await sb.rpc('create_paciente_from_saas', {
+          p_cedula:  prop.cedula,
+          p_nombre:  nom,
+          p_especie: esp || null,
+          p_raza:    nm.raza || null,
+          p_genero:  nm.gen  || null,
+          p_fn:      nm.fn   || null,
+          p_peso:    nm.peso || null,
+          p_chip:    nm.chip || null
+        });
+        if (pacienteId) nm.paciente_id = pacienteId;
+      } catch (e) { console.warn('saveMas: create_paciente_from_saas:', e); }
+    }
+  }
+
   const mas = DB.get('mas'); mas.push(nm); DB.set('mas', mas);
   updSelects(); rMas(); rHistList(); rStats(); closeM('m-mas');
   toast('Mascota guardada ✓ — Abriendo historia clínica...', 'ok');

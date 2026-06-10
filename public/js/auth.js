@@ -18,10 +18,11 @@ async function doLogin() {
 
   btn.textContent = 'Sincronizando datos…';
   await DB.loadAll();
+  DB.initRealtime();
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('app').style.display = 'flex';
   btn.textContent = 'Ingresar al panel →'; btn.disabled = false;
-  seed(); boot(); toast('¡Bienvenido Iván! 🐾', 'ok');
+  seed(); boot(); toast('¡Bienvenido! 🐾', 'ok');
 }
 
 async function doLogout() {
