@@ -89,7 +89,7 @@ vv_store table en Supabase (backup en la nube)
 | `cots` | Cotizaciones |
 | `recs` | Recordatorios personalizados |
 
-Al hacer login, `DB.loadAll()` compara `localStorage` vs Supabase y usa el que tenga más registros. Siempre escribe en ambos lados al guardar.
+**Supabase es la fuente de verdad.** Al hacer login, `DB.loadAll()` siempre descarga de Supabase. `DB.set()` escribe en Supabase primero (y en localStorage como caché). Así cualquier dispositivo que entre al SaaS ve los mismos datos.
 
 ---
 
@@ -144,8 +144,11 @@ CREATE POLICY "solo_autenticados" ON vv_store
 ## Auth
 
 - Supabase Auth (email/password)
-- Usuario único: el veterinario (Iván)
-- La `ANON_KEY` se usa desde el cliente para autenticar — el cliente Supabase se crea con `supabase.createClient(SB_URL, SB_KEY)` usando la anon key
+- **Dos usuarios admin** (ambos ven los mismos datos en `vv_store`):
+  - Iván: `ivancho1am@gmail.com`
+  - Mónica: `monica@vitalvetcrv.com.co` / `Monica2026!`
+- La `ANON_KEY` se usa desde el cliente — el cliente Supabase se crea con `supabase.createClient(SB_URL, SB_KEY)` usando la anon key
+- RLS de `vv_store`: `auth.role() = 'authenticated'` → cualquier usuario autenticado accede a todos los datos (diseño intencional — es un sistema de un solo equipo)
 
 ---
 
