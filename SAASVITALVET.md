@@ -89,7 +89,7 @@ vv_store table en Supabase (backup en la nube)
 | `cots` | Cotizaciones |
 | `recs` | Recordatorios personalizados |
 
-**Supabase es la fuente de verdad.** Al hacer login, `DB.loadAll()` siempre descarga de Supabase. `DB.set()` escribe en Supabase primero (y en localStorage como caché). Así cualquier dispositivo que entre al SaaS ve los mismos datos.
+**Supabase es la fuente de verdad.** `DB.loadAll()` siempre descarga de Supabase sin comparación. `DB.set()` escribe en Supabase inmediatamente al guardar. `app.js` verifica sesión al cargar la página y llama `DB.loadAll()` automáticamente — funciona abriendo desde acceso directo o panel WordPress sin pasar por login.
 
 ---
 
@@ -144,8 +144,8 @@ CREATE POLICY "solo_autenticados" ON vv_store
 ## Auth
 
 - Supabase Auth (email/password)
-- **Dos usuarios admin** (ambos ven los mismos datos en `vv_store`):
-  - Iván: `ivancho1am@gmail.com`
+- **Credenciales actuales** (ambos ven los mismos datos en `vv_store`):
+  - Admin principal: `admin@vitalvet.com` / `ivanvitalvet2026!`
   - Mónica: `monica@vitalvetcrv.com.co` / `Monica2026!`
 - La `ANON_KEY` se usa desde el cliente — el cliente Supabase se crea con `supabase.createClient(SB_URL, SB_KEY)` usando la anon key
 - RLS de `vv_store`: `auth.role() = 'authenticated'` → cualquier usuario autenticado accede a todos los datos (diseño intencional — es un sistema de un solo equipo)
@@ -179,8 +179,9 @@ Bridge inicial: función `bridge_mas_to_pacientes_function` vinculó 486/487 mas
 
 | Mecanismo | Descripción |
 |---|---|
-| **Timestamp sync** | `DB.set()` guarda `updated_at` en `vv_meta`; `DB.loadAll()` compara con `vv_store.updated_at` — gana el más reciente |
-| **Realtime** | `DB.initRealtime()` suscripción Supabase Realtime a `vv_store` — actualiza localStorage automáticamente desde otro dispositivo |
+| **Auto-sync al cargar** | `app.js` detecta sesión activa y llama `DB.loadAll()` automáticamente al abrir la página |
+| **Sync al login** | `doLogin()` llama `DB.loadAll()` después de autenticar |
+| **Realtime** | `DB.initRealtime()` suscripción Supabase Realtime — actualiza localStorage cuando otro dispositivo guarda |
 | **Botón Sincronizar** | 🔄 en topbar — ejecuta `DB.loadAll()` + `boot()` manualmente |
 
 ### Tablas Supabase usadas

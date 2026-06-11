@@ -11,6 +11,10 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body>
+<script>
+// Ocultar login inmediatamente si hay sesión guardada (evita flash al entrar desde acceso directo)
+try { if(Object.keys(localStorage).some(k=>k.startsWith('sb-')&&k.includes('auth')))document.write('<style>#login-screen{display:none}</style>'); } catch(e){}
+</script>
 
 <!-- ═══ LOGIN ═══ -->
 <div id="login-screen">
