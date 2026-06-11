@@ -23,7 +23,7 @@ app.use((req, res, next) => {
   next();
 });
 
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, 'public'), { index: false }));
 
 // Explicit route for estadisticas dashboard
 app.get('/estadisticas.html', (req, res) => {
