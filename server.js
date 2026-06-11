@@ -14,6 +14,15 @@ let indexTemplate = fs.readFileSync(indexPath, 'utf8');
 const configScript = `<script>window.__SB_URL="${SB_URL}";window.__SB_KEY="${SB_KEY}";</script>`;
 const indexHtml = indexTemplate.replace('</head>', configScript + '\n</head>');
 
+// Security headers — panel admin is internal, never indexed
+app.use((req, res, next) => {
+  res.setHeader('X-Robots-Tag', 'noindex, nofollow');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('Referrer-Policy', 'no-referrer');
+  next();
+});
+
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Explicit route for estadisticas dashboard

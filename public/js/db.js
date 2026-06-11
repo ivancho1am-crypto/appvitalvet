@@ -15,7 +15,9 @@ const DB = {
       .then(({ error }) => { if (error) console.warn('Supabase sync error [' + k + ']:', error); });
   },
 
-  // Al iniciar sesión: sincroniza usando updated_at — gana el más reciente.
+  // Al iniciar sesión o al pulsar Sincronizar: Supabase es la fuente de verdad.
+  // Siempre descarga. DB.set() ya escribe a Supabase inmediatamente al guardar,
+  // así que cualquier cambio reciente de cualquier dispositivo ya estará allí.
   loadAll: async () => {
     const sb = getSB();
     if (!sb) return;
@@ -26,23 +28,9 @@ const DB = {
         const { data: row, error } = await sb.from('vv_store')
           .select('data, updated_at').eq('key', k).maybeSingle();
         if (error) { console.warn('Supabase loadAll [' + k + ']:', error); continue; }
-
         if (!row || row.data === null) continue;
-
-        const sbTs    = row.updated_at ? new Date(row.updated_at).getTime() : 0;
-        const localTs = meta[k]        ? new Date(meta[k]).getTime()        : 0;
-
-        if (sbTs >= localTs) {
-          // Supabase más reciente o igual → descargar
-          localStorage.setItem('vv_' + k, JSON.stringify(row.data));
-          meta[k] = row.updated_at;
-        } else {
-          // localStorage más reciente → subir a Supabase
-          const localData = JSON.parse(localStorage.getItem('vv_' + k) || '[]');
-          await sb.from('vv_store')
-            .upsert({ key: k, data: localData, updated_at: meta[k] || new Date().toISOString() })
-            .then(({ error }) => { if (error) console.warn('Supabase push [' + k + ']:', error); });
-        }
+        localStorage.setItem('vv_' + k, JSON.stringify(row.data));
+        meta[k] = row.updated_at || new Date().toISOString();
       } catch (e) { console.warn('Supabase loadAll [' + k + ']:', e); }
     }
     localStorage.setItem('vv_meta', JSON.stringify(meta));
