@@ -1,7 +1,7 @@
 # VitalVet CRV — Panel de Gestión Clínica (SaaS interno)
 
 **URL producción:** https://appvitalvet-production.up.railway.app/  
-**Última actualización:** 2026-06-10  
+**Última actualización:** 2026-06-11  
 **Tipo:** Software de gestión interna de la clínica · uso exclusivo del equipo VitalVet CRV  
 **Proyecto:** Barbosa, Santander, Colombia
 
@@ -51,7 +51,7 @@ vitalvet-app/
         ├── informes.js    — Tablas de propietarios/mascotas + exportar CSV
         ├── helpers.js     — Utilidades: edad(), EI(), avColor(), parseFecha()
         ├── modals.js      — openM(), closeM()
-        ├── app.js         — Entry point (1 línea)
+        ├── app.js         — Entry point: IIFE que restaura sesión activa y llama DB.loadAll()
         └── seed.js        — Datos de ejemplo para desarrollo
 ```
 
@@ -66,6 +66,8 @@ PORT=<asignado por Railway>
 ```
 
 El servidor inyecta estas variables en el HTML como `window.__SB_URL` y `window.__SB_KEY` antes de servir la página.
+
+> **Importante:** `express.static` usa `{ index: false }` para que la ruta `/` pase por el handler de inyección y no sirva `index.html` en crudo sin las variables.
 
 ---
 
@@ -154,7 +156,14 @@ CREATE POLICY "solo_autenticados" ON vv_store
 
 ## Deploy y CI/CD
 
-- Push a `main` → Railway auto-deploy
+- Push a `main` → Railway **no tiene auto-deploy por GitHub** configurado. Deployar manualmente:
+
+```bash
+cd ~/vitalvet-app
+railway link --project appvitalvet   # solo la primera vez
+railway up --detach                  # sube y despliega
+```
+
 - `railway.toml`: `startCommand = "node server.js"`, `restartPolicyType = "ON_FAILURE"`, `maxRetries = 3`
 - No hay build step — los archivos JS son vanilla, se sirven directamente
 
