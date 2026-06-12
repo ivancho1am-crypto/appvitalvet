@@ -6,6 +6,7 @@
 <title>VitalVet · Estadísticas Clínicas</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 :root{
@@ -349,25 +350,25 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
       <div class="kpi-row">
         <div class="kpi" style="--c:#059669">
           <div class="kpi-ico">💉</div>
-          <div class="kpi-val">232</div>
+          <div class="kpi-val" id="kpi-vacs">232</div>
           <div class="kpi-label">Vacunaciones aplicadas</div>
           <div class="kpi-sub">48% de la población total</div>
         </div>
         <div class="kpi" style="--c:#0891b2">
           <div class="kpi-ico">🪱</div>
-          <div class="kpi-val">199</div>
+          <div class="kpi-val" id="kpi-desps">199</div>
           <div class="kpi-label">Desparasitaciones</div>
           <div class="kpi-sub">Interna + Externa</div>
         </div>
         <div class="kpi" style="--c:#d97706">
           <div class="kpi-ico">🧪</div>
-          <div class="kpi-val">234</div>
+          <div class="kpi-val" id="kpi-labs">234</div>
           <div class="kpi-label">Exámenes de laboratorio</div>
           <div class="kpi-sub">Hemograma, Bioquímica, otros</div>
         </div>
         <div class="kpi" style="--c:#7c3aed">
           <div class="kpi-ico">📸</div>
-          <div class="kpi-val">10</div>
+          <div class="kpi-val" id="kpi-imgs">10</div>
           <div class="kpi-label">Imágenes diagnósticas</div>
           <div class="kpi-sub">Rx, Ecografía</div>
         </div>
@@ -474,59 +475,116 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 </div><!-- /main -->
 
 <script>
-// ── DATOS (procesados desde Supabase vv_store) ─────────────────────────────
-const DATA = {
+// ── DATOS — fallback estático (se sobreescribe con datos reales de Supabase) ──
+let DATA = {
   mascotas: 485, propietarios: 402, historial: 1310,
   especies:    { canino:392, felino:91, lagomorfo:4 },
   generos:     { macho:230, hembra:257 },
   repro:       { esterilizado:178, no_esterilizado:305 },
   grupos_edad: { '< 1 año':44, '1–3 años':152, '3–7 años':133, '7–12 años':112, '> 12 años':46 },
-  razas_top: [
-    ['Criollo(a)',114],['Pinscher',58],['Mestizo',46],['Cruce',26],['Shih Tzu',24],
-    ['French Poodle',20],['Bulldog Francés',18],['Cocker',18],['Labrador',16],['Schnauzer',15]
-  ],
+  razas_top: [['Criollo(a)',114],['Pinscher',58],['Mestizo',46],['Cruce',26],['Shih Tzu',24],['French Poodle',20],['Bulldog Francés',18],['Cocker',18],['Labrador',16],['Schnauzer',15]],
   alimentos: { 'Dieta Mixta':220, 'Concentrado':69, 'N/D':130, 'Natural':6, 'Comercial':5 },
-  tipos_hist: {
-    'Laboratorio':234,'Vacunación':232,'Consulta':205,'Desparasitación':199,
-    'Fórmula Médica':167,'Cirugía':141,'Seguimiento':51,'Hospitalización':27,
-    'Documento':23,'Orden':17,'Imagen':10,'Remisión':4
-  },
-  cirugias: [
-    ['OVH (Ovariohisterectomía)',48],['Orquiectomía / OQH',19],['Detartraje Profilaxis',13],
-    ['Detartraje + E.Periodontal',7],['Mastectomía Parcial',4],['Piometra',4],
-    ['Estafilectomía',2],['Otohematoma',2],['Laparotomía Exploratoria',2],['Otros',40]
-  ],
-  medicamentos: [
-    ['Diciclin / Dicilin',51],['Prednisolona',32],['Nicilan',31],['Meloxicam',22],
-    ['Azimelox',14],['Orenda',10],['Dolomex',9],['Gentax Ótico',8]
-  ],
-  vacunas: [
-    ['Nobivac DHPPi',53],['Nobivac® Puppy DP',30],['Nobivac® RL',30],
-    ['Canigen MHA2 PPi/L',24],['Feligen® CRP',19],['Nobivac® Rabia',16],
-    ['Parvigen',9],['Rabigen Mono',8]
-  ],
-  desparasitantes: [
-    ['Endogard',80],['Credelio',72],['NexGard Spectra',18],['Rondel',8],['Petsantel',5]
-  ],
-  motivos: [
-    ['Consulta general',179],['Urgencias',6],['Radiografía (Rx)',4],
-    ['Esterilización',2],['Ecografía',2],['Chequeo Preventivo',2]
-  ],
-  ciudades: [
-    ['Barbosa',277],['Puente Nacional',26],['Moniquirá',22],['Guepsa',16],
-    ['Bogotá',10],['Suaita',8],['Vélez',6],['San José de Pare',5],['Tunja',4],['Otros',28]
-  ],
+  tipos_hist: { 'Laboratorio':234,'Vacunación':232,'Consulta':205,'Desparasitación':199,'Fórmula Médica':167,'Cirugía':141,'Seguimiento':51,'Hospitalización':27,'Documento':23,'Orden':17,'Imagen':10,'Remisión':4 },
+  cirugias: [['OVH (Ovariohisterectomía)',48],['Orquiectomía / OQH',19],['Detartraje Profilaxis',13],['Detartraje + E.Periodontal',7],['Mastectomía Parcial',4],['Piometra',4],['Estafilectomía',2],['Otohematoma',2],['Laparotomía Exploratoria',2],['Otros',40]],
+  medicamentos: [['Diciclin / Dicilin',51],['Prednisolona',32],['Nicilan',31],['Meloxicam',22],['Azimelox',14],['Orenda',10],['Dolomex',9],['Gentax Ótico',8]],
+  vacunas: [['Nobivac DHPPi',53],['Nobivac® Puppy DP',30],['Nobivac® RL',30],['Canigen MHA2 PPi/L',24],['Feligen® CRP',19],['Nobivac® Rabia',16],['Parvigen',9],['Rabigen Mono',8]],
+  desparasitantes: [['Endogard',80],['Credelio',72],['NexGard Spectra',18],['Rondel',8],['Petsantel',5]],
+  motivos: [['Consulta general',179],['Urgencias',6],['Radiografía (Rx)',4],['Esterilización',2],['Ecografía',2],['Chequeo Preventivo',2]],
+  ciudades: [['Barbosa',277],['Puente Nacional',26],['Moniquirá',22],['Guepsa',16],['Bogotá',10],['Suaita',8],['Vélez',6],['San José de Pare',5],['Tunja',4],['Otros',28]],
   fuentes: { 'Publicidad física':141,'Referido':131,'Sin registro':80,'Otros':35,'Facebook':6,'Google':4 },
-  timeline: {
-    '2024-11':5,'2024-12':3,'2025-01':2,'2025-03':4,'2025-04':4,'2025-05':14,
-    '2025-06':4,'2025-07':7,'2025-08':11,'2025-09':20,'2025-10':14,'2025-11':11,
-    '2025-12':10,'2026-01':8,'2026-02':22,'2026-03':24,'2026-04':14,'2026-06':1
-  },
-  pesos_razas: [
-    ['Canino Criollo',12.4],['Pinscher',4.8],['Labrador',28.6],['Bulldog Francés',13.2],
-    ['Shih Tzu',5.9],['Cocker',10.8],['French Poodle',7.3],['Felino',4.1]
-  ]
+  timeline: { '2024-11':5,'2024-12':3,'2025-01':2,'2025-03':4,'2025-04':4,'2025-05':14,'2025-06':4,'2025-07':7,'2025-08':11,'2025-09':20,'2025-10':14,'2025-11':11,'2025-12':10,'2026-01':8,'2026-02':22,'2026-03':24,'2026-04':14,'2026-06':1 },
+  pesos_razas: [['Canino Criollo',12.4],['Pinscher',4.8],['Labrador',28.6],['Bulldog Francés',13.2],['Shih Tzu',5.9],['Cocker',10.8],['French Poodle',7.3],['Felino',4.1]],
+  _vacs:232, _desps:199, _labs:234, _imgs:10,
 };
+
+// ── FETCH Y COMPUTE desde vv_store ─────────────────────────────────────────
+async function fetchSBData() {
+  const url = window.__SB_URL, key = window.__SB_KEY;
+  if (!url || !key) return null;
+  try {
+    const sb = supabase.createClient(url, key);
+    const { data: { session } } = await sb.auth.getSession();
+    if (!session) return null;
+    const rows = await Promise.all(['props','mas','hist'].map(k =>
+      sb.from('vv_store').select('data').eq('key', k).maybeSingle().then(r => [k, r.data?.data ?? []])
+    ));
+    return Object.fromEntries(rows);
+  } catch(e) { console.warn('estadisticas fetch:', e); return null; }
+}
+
+function buildData(props, mas, hist) {
+  const now = new Date();
+  const cnt = (arr, key) => {
+    const c = {};
+    arr.forEach(x => { const v = x[key]||'Sin registro'; c[v]=(c[v]||0)+1; });
+    return c;
+  };
+  const topN = (obj, n=10) => Object.entries(obj).sort((a,b)=>b[1]-a[1]).slice(0,n);
+
+  const espRaw = cnt(mas,'esp');
+  const especies = { canino:espRaw['canino']||0, felino:espRaw['felino']||0 };
+  Object.entries(espRaw).forEach(([k,v])=>{ if(k!=='canino'&&k!=='felino') especies[k]=(especies[k]||0)+v; });
+
+  const generos = { macho:0, hembra:0 };
+  mas.forEach(m=>{ if(m.gen==='macho') generos.macho++; else if(m.gen==='hembra') generos.hembra++; });
+
+  const repro = { esterilizado:0, no_esterilizado:0 };
+  mas.forEach(m=>{ if(m.repr==='esterilizado') repro.esterilizado++; else if(m.repr==='no_esterilizado') repro.no_esterilizado++; });
+
+  const ge = { '< 1 año':0, '1–3 años':0, '3–7 años':0, '7–12 años':0, '> 12 años':0 };
+  mas.forEach(m=>{ if(!m.fn) return; const y=(now-new Date(m.fn))/(365.25*864e5); if(y<1) ge['< 1 año']++; else if(y<3) ge['1–3 años']++; else if(y<7) ge['3–7 años']++; else if(y<12) ge['7–12 años']++; else ge['> 12 años']++; });
+
+  const aliRaw = cnt(mas,'ali'); delete aliRaw['Sin registro']; delete aliRaw[''];
+  const alimentos = aliRaw;
+
+  const tipoMap = { laboratorio:'Laboratorio',vacunacion:'Vacunación',consulta:'Consulta',desparasitacion:'Desparasitación',formula:'Fórmula Médica',cirugia:'Cirugía',seguimiento:'Seguimiento',hospitalizacion:'Hospitalización',documento:'Documento',orden:'Orden',imagen:'Imagen',remision:'Remisión',peluqueria:'Peluquería',guarderia:'Guardería',cita:'Cita',mensaje:'Mensaje' };
+  const tiposRaw = cnt(hist,'tipo');
+  const tipos_hist = Object.fromEntries(Object.entries(tiposRaw).map(([k,v])=>[tipoMap[k]||k,v]));
+
+  const grpBy = (arr, key) => { const c={}; arr.forEach(x=>{ const v=(x[key]||'').trim(); if(v.length>1) c[v]=(c[v]||0)+1; }); return c; };
+  const cirugias  = topN(grpBy(hist.filter(h=>h.tipo==='cirugia'),'desc'),10);
+
+  const parseMeds = (arr) => { const c={}; arr.forEach(h=>{ if(!h.med) return; h.med.split(/[,;\n]/).forEach(m=>{ const s=m.trim(); if(s.length>2) c[s]=(c[s]||0)+1; }); }); return c; };
+  const medicamentos   = topN(parseMeds(hist),8);
+  const vacunas        = topN(parseMeds(hist.filter(h=>h.tipo==='vacunacion')),8);
+  const desparasitantes= topN(parseMeds(hist.filter(h=>h.tipo==='desparasitacion')),8);
+  const motivos        = topN(grpBy(hist.filter(h=>h.tipo==='consulta'),'desc'),8);
+
+  const ciudades = topN(cnt(props,'ciudad'),10);
+
+  const fMap = { recom:'Referido',google:'Google',redes:'Redes sociales',pub:'Publicidad física',facebook:'Facebook',insta:'Instagram',web:'Página web' };
+  const fRaw = {}; props.forEach(p=>{ const f=fMap[p.como]||(p.como?p.como:'Sin registro'); fRaw[f]=(fRaw[f]||0)+1; });
+  const fuentes = fRaw;
+
+  const tlRaw = {}; hist.forEach(h=>{ if(!h.fecha) return; const ym=h.fecha.slice(0,7); if(/^\d{4}-\d{2}$/.test(ym)) tlRaw[ym]=(tlRaw[ym]||0)+1; });
+  const timeline = Object.fromEntries(Object.entries(tlRaw).sort());
+
+  const pRaw={}, pCnt={}; mas.forEach(m=>{ if(m.raza&&m.peso&&+m.peso>0){ pRaw[m.raza]=(pRaw[m.raza]||0)+ +m.peso; pCnt[m.raza]=(pCnt[m.raza]||0)+1; } });
+  const pesos_razas = Object.entries(pRaw).map(([r,s])=>[r,+(s/pCnt[r]).toFixed(1)]).sort((a,b)=>b[1]-a[1]).slice(0,8);
+
+  return {
+    mascotas:mas.length, propietarios:props.length, historial:hist.length,
+    especies, generos, repro, grupos_edad:ge, razas_top:topN(cnt(mas,'raza'),10),
+    alimentos, tipos_hist, cirugias, medicamentos, vacunas, desparasitantes,
+    motivos, ciudades, fuentes, timeline, pesos_razas,
+    _vacs:hist.filter(h=>h.tipo==='vacunacion').length,
+    _desps:hist.filter(h=>h.tipo==='desparasitacion').length,
+    _labs:hist.filter(h=>h.tipo==='laboratorio').length,
+    _imgs:hist.filter(h=>h.tipo==='imagen').length,
+  };
+}
+
+function updateKPIs() {
+  const set = (id,v) => { const el=document.getElementById(id); if(el) el.textContent=v; };
+  set('kpi-mas',   DATA.mascotas.toLocaleString('es-CO'));
+  set('kpi-props', DATA.propietarios.toLocaleString('es-CO'));
+  set('kpi-hist',  DATA.historial.toLocaleString('es-CO'));
+  set('kpi-vacs',  DATA._vacs);
+  set('kpi-desps', DATA._desps);
+  set('kpi-labs',  DATA._labs);
+  set('kpi-imgs',  DATA._imgs);
+  set('tb-pacientes', DATA.mascotas + ' pacientes');
+}
 
 // ── COLORES ────────────────────────────────────────────────────────────────
 const C = {
@@ -714,17 +772,23 @@ function scrollTo(id){
 }
 
 // ── INIT ─────────────────────────────────────────────────────────────────
-window.addEventListener('DOMContentLoaded', () => {
-  const now = new Date();
-  const fmt = now.toLocaleDateString('es-CO',{day:'2-digit',month:'short',year:'numeric'});
-  document.getElementById('tb-date').textContent = `Actualizado: ${fmt}`;
+window.addEventListener('DOMContentLoaded', async () => {
+  // Intentar cargar datos reales desde Supabase
+  const live = await fetchSBData();
+  if (live) {
+    DATA = buildData(live.props, live.mas, live.hist);
+    updateKPIs();
+    // Auto-refresh cada 5 minutos
+    setTimeout(() => window.location.reload(), 5 * 60 * 1000);
+  }
+
+  const fmt = new Date().toLocaleString('es-CO',{dateStyle:'medium',timeStyle:'short'});
+  const tag = live ? 'En vivo · ' : 'Snapshot · ';
+  document.getElementById('tb-date').textContent = tag + fmt;
   document.getElementById('sb-updated').textContent = `Última actualización: ${fmt}`;
 
-  // Hide loader and render charts
-  setTimeout(()=>{
-    document.getElementById('loading').style.display = 'none';
-    initCharts();
-  }, 600);
+  document.getElementById('loading').style.display = 'none';
+  initCharts();
 
   // Intersection observer for active sidebar link
   const sections = ['resumen','pacientes','epidemiologia','preventivo','geografia','actividad'];

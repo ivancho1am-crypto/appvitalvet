@@ -8,11 +8,13 @@ const PORT = process.env.PORT || 3000;
 const SB_URL = process.env.SUPABASE_URL || '';
 const SB_KEY = process.env.SUPABASE_ANON_KEY || '';
 
-const indexPath = path.join(__dirname, 'public', 'index.html');
-let indexTemplate = fs.readFileSync(indexPath, 'utf8');
-
 const configScript = `<script>window.__SB_URL="${SB_URL}";window.__SB_KEY="${SB_KEY}";</script>`;
-const indexHtml = indexTemplate.replace('</head>', configScript + '\n</head>');
+
+const indexPath = path.join(__dirname, 'public', 'index.html');
+const indexHtml = fs.readFileSync(indexPath, 'utf8').replace('</head>', configScript + '\n</head>');
+
+const estadPath = path.join(__dirname, 'public', 'estadisticas.html');
+const estadHtml = fs.readFileSync(estadPath, 'utf8').replace('</head>', configScript + '\n</head>');
 
 // Security headers — panel admin is internal, never indexed
 app.use((req, res, next) => {
@@ -25,10 +27,10 @@ app.use((req, res, next) => {
 
 app.use(express.static(path.join(__dirname, 'public'), { index: false }));
 
-// Explicit route for estadisticas dashboard
+// Estadisticas dashboard — servir con variables inyectadas
 app.get('/estadisticas.html', (req, res) => {
   res.setHeader('Content-Type', 'text/html');
-  res.sendFile(path.join(__dirname, 'public', 'estadisticas.html'));
+  res.send(estadHtml);
 });
 
 // SPA fallback — serve index.html for all other routes
