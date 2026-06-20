@@ -182,7 +182,7 @@ const HIST_FORMS = {
     <div class="fi"><label>Diagnóstico definitivo</label><input type="text" id="h-diag2" placeholder="Diagnóstico definitivo"></div>
     <div class="fi ff"><label>Tratamiento / Indicaciones</label><textarea id="h-trat" placeholder="Tratamiento indicado, dosis, frecuencia..."></textarea></div>
     <div class="fi ff"><label>Medicamentos recetados</label><textarea id="h-med" placeholder="Ej: MELOXICAM 5 gotas c/24h x 6 días..." style="min-height:55px"></textarea></div>
-    <div class="fi"><label>Peso en consulta (kg)</label><input type="number" id="h-peso" step="0.1" placeholder="0.0"></div>
+    <div class="fi"><label>Peso en consulta (kg)</label><input type="number" id="h-peso" step="0.1" placeholder="0.0" min="0"></div>
     <div class="fi"><label>Próxima cita / control</label><input type="date" id="h-prox"></div>
     <div class="fi ff"><label>Observaciones</label><textarea id="h-not" placeholder="Observaciones adicionales..." style="min-height:50px"></textarea></div>
     <div class="fi ff"><label>Adjuntos</label><input type="file" multiple id="h-files" accept=".pdf,.jpg,.jpeg,.png,.webp,.gif,.doc,.docx" style="font-size:12px"></div></div>`,
@@ -505,6 +505,7 @@ async function collectAndUploadFiles(tipo) {
 async function saveHist() {
   if (!currentPet) { toast('Selecciona una mascota', 'err'); return }
   const h = { id: 'h' + Date.now(), mid: currentPet, ...collectHistFields() };
+  if (h.peso && parseFloat(h.peso) < 0) { toast('El peso no puede ser negativo', 'err'); return }
   const archivos = await collectAndUploadFiles(h.tipo);
   if (archivos.length) h.archivos = archivos;
   const hist = DB.get('hist'); hist.push(h);

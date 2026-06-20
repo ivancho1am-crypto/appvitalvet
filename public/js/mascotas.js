@@ -8,6 +8,8 @@ function updRaza() {
 async function saveMas() {
   const pid = document.getElementById('m-prop-sel').value, nom = document.getElementById('m-nom').value.trim(), esp = document.getElementById('m-esp').value;
   if (!pid || !nom || !esp) { toast('Propietario, nombre y especie son obligatorios', 'err'); return }
+  const pesoRaw = document.getElementById('m-peso').value;
+  if (pesoRaw && parseFloat(pesoRaw) < 0) { toast('El peso no puede ser negativo', 'err'); return }
   const nm = {
     id: 'm' + Date.now(), pid, nombre: nom, chip: document.getElementById('m-chip').value.trim(), esp,
     raza: document.getElementById('m-raza').value.trim(), gen: document.getElementById('m-gen').value,

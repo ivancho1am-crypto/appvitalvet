@@ -45,7 +45,7 @@ function rCotizacion() {
       <input class="cot-edit-name" value="${nombre.replace(/"/g, '&quot;')}" title="Editar nombre" ${sel ? '' : 'readonly tabindex="-1"'} oninput="cotEditNombreProc('${p.id}',this.value)">
       <span class="badge bg-gray" style="font-size:9px">${p.cat}</span>
       <span style="font-size:10px;color:var(--g500)">$</span>
-      <input class="cot-edit-price" type="number" value="${precio}" title="Editar precio" ${sel ? '' : 'readonly tabindex="-1"'} oninput="cotEditPrecioProc('${p.id}',this.value)">
+      <input class="cot-edit-price" type="number" value="${precio}" min="0" title="Editar precio" ${sel ? '' : 'readonly tabindex="-1"'} oninput="cotEditPrecioProc('${p.id}',this.value)">
       <button class="cot-del-btn" onclick="cotDelProc('${p.id}')" title="Eliminar">✕</button>
     </div>`;
   }).join('');
@@ -129,7 +129,7 @@ function renderManualItems() {
     <div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--g200)">
       <input style="flex:1;border:1.5px solid var(--g300);border-radius:6px;padding:5px 8px;font-family:inherit;font-size:12px;outline:none"
         value="${m.nombre.replace(/"/g, '&quot;')}" oninput="editManItem('${m.uid}','nombre',this.value)">
-      <input type="number" style="width:110px;border:1.5px solid var(--g300);border-radius:6px;padding:5px 8px;font-family:'DM Mono',monospace;font-size:12px;font-weight:600;color:var(--teal);text-align:right;outline:none"
+      <input type="number" min="0" style="width:110px;border:1.5px solid var(--g300);border-radius:6px;padding:5px 8px;font-family:'DM Mono',monospace;font-size:12px;font-weight:600;color:var(--teal);text-align:right;outline:none"
         value="${m.precio}" oninput="editManItem('${m.uid}','precio',this.value)">
       <button class="cot-del-btn" onclick="delManItem('${m.uid}')">✕</button>
     </div>`).join('');

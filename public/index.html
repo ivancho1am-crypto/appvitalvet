@@ -285,7 +285,7 @@ try { if(Object.keys(localStorage).some(k=>k.startsWith('sb-')&&k.includes('auth
                 <div class="cot-manual-lbl">Agregar ítem manual</div>
                 <div class="cot-manual-add">
                   <input id="cot-man-nom" type="text" placeholder="Nombre del ítem..." style="flex:1;min-width:140px">
-                  <input id="cot-man-val" type="number" placeholder="Valor $" style="width:120px">
+                  <input id="cot-man-val" type="number" placeholder="Valor $" style="width:120px" min="0">
                   <button class="btn btn-green btn-sm" onclick="addManualItem()">+ Agregar</button>
                 </div>
               </div>
@@ -391,7 +391,7 @@ try { if(Object.keys(localStorage).some(k=>k.startsWith('sb-')&&k.includes('auth
       <div class="fg">
         <div class="fi"><label>Tipo documento</label>
           <select id="p-tdoc"><option value="CC">Cédula</option><option value="CE">C. Extranjería</option><option value="NIT">NIT</option></select></div>
-        <div class="fi"><label>Número *</label><input type="text" id="p-ced" placeholder="1018436172"></div>
+        <div class="fi"><label>Número *</label><input type="text" id="p-ced" placeholder="Ej: 1000000000"></div>
         <div class="fi ff"><label>Nombre completo *</label><input type="text" id="p-nom" placeholder="Nombre completo"></div>
         <div class="fi"><label>Móvil / WhatsApp *</label><input type="tel" id="p-tel" placeholder="+57 310..."></div>
         <div class="fi"><label>Email</label><input type="email" id="p-email" placeholder="correo@email.com"></div>
@@ -406,7 +406,7 @@ try { if(Object.keys(localStorage).some(k=>k.startsWith('sb-')&&k.includes('auth
         <div class="fi ff" style="padding:10px 12px;background:var(--g100);border-radius:var(--r-sm)">
           <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer">
             <input type="checkbox" id="p-acepta" style="margin-top:2px;flex-shrink:0;accent-color:#2e7d32" required>
-            <span style="font-size:11px;color:var(--g700);line-height:1.5">
+            <span style="flex:1;min-width:0;font-size:11px;color:var(--g700);line-height:1.5">
               El propietario autoriza el tratamiento de sus datos personales conforme a la
               <strong>Ley 1581 de 2012</strong> y la política de privacidad de VitalVet CRV
               para fines de atención clínica, recordatorios y comunicaciones.
@@ -445,7 +445,7 @@ try { if(Object.keys(localStorage).some(k=>k.startsWith('sb-')&&k.includes('auth
         <div class="fi"><label>Color</label><input type="text" id="m-col" placeholder="Color del pelaje"></div>
         <div class="fdiv">Datos clínicos</div>
         <div class="fi"><label>Fecha nacimiento</label><input type="date" id="m-fn"></div>
-        <div class="fi"><label>Peso (kg)</label><input type="number" id="m-peso" placeholder="0.0" step="0.1"></div>
+        <div class="fi"><label>Peso (kg)</label><input type="number" id="m-peso" placeholder="0.0" step="0.1" min="0"></div>
         <div class="fi"><label>Talla</label>
           <select id="m-tall"><option value="">Selecciona</option>
             <option value="mini">Mini</option><option value="pequeño">Pequeño</option>

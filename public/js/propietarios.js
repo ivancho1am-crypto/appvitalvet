@@ -1,13 +1,17 @@
 // Módulo: Propietarios
-const CRM_URL = 'https://vitabot-vitalvet-production.up.railway.app';
 
 function syncPropToCRM(prop) {
   const mascotas = DB.get('mas').filter(m => m.pid === prop.id);
-  fetch(CRM_URL + '/api/crm/sync-patient', {
+  // Vía proxy del propio servidor — la clave de VitaBot nunca se expone en el navegador.
+  fetch('/api/sync-patient', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ propietario: prop, mascotas })
-  }).catch(() => {}); // fire-and-forget: nunca bloquea la app
+  }).then(r => {
+    if (!r.ok) toast('Propietario guardado, pero no se sincronizó con WhatsApp CRM (revisar conexión)', 'info');
+  }).catch(() => {
+    toast('Propietario guardado, pero no se sincronizó con WhatsApp CRM (sin conexión)', 'info');
+  });
 }
 const CONSENT_VERSION = '2025-01';
 
