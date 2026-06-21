@@ -48,13 +48,6 @@ app.post('/api/sync-patient', async (req, res) => {
   }
 });
 
-app.get('/api/_debug_routes', (req, res) => {
-  const routes = app._router.stack
-    .filter(l => l.route)
-    .map(l => Object.keys(l.route.methods)[0].toUpperCase() + ' ' + l.route.path);
-  res.json({ routes, node: process.version, cwd: __dirname });
-});
-
 app.use(express.static(path.join(__dirname, 'public'), { index: false }));
 
 // Estadisticas dashboard — servir con variables inyectadas
@@ -64,7 +57,9 @@ app.get('/estadisticas.html', (req, res) => {
 });
 
 // SPA fallback — serve index.html for all other routes
-app.get('*', (req, res) => {
+// (app.use sin path, no app.get('*'): Express 4.22 actualizó path-to-regexp
+// y el wildcard '*' sin nombre dejó de respetar el orden de registro de rutas)
+app.use((req, res) => {
   res.setHeader('Content-Type', 'text/html');
   res.send(indexHtml);
 });
