@@ -48,6 +48,13 @@ app.post('/api/sync-patient', async (req, res) => {
   }
 });
 
+app.get('/api/_debug_routes', (req, res) => {
+  const routes = app._router.stack
+    .filter(l => l.route)
+    .map(l => Object.keys(l.route.methods)[0].toUpperCase() + ' ' + l.route.path);
+  res.json({ routes, node: process.version, cwd: __dirname });
+});
+
 app.use(express.static(path.join(__dirname, 'public'), { index: false }));
 
 // Estadisticas dashboard — servir con variables inyectadas
