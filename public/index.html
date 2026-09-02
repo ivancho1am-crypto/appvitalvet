@@ -7,6 +7,58 @@
 <title>VitalVet — Panel Admin</title>
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/css/styles.css">
+<style>
+/* ── Portada estilo videojuego (splash de entrada) ──────────────────
+   .av-splash-imgbox mantiene SIEMPRE la proporción real de la imagen
+   (1536×1024) para que nunca se recorte, y usa container query units
+   (cqw = % del ancho de la caja) para que el texto escale junto con
+   la imagen en vez de con el viewport. Overlay puro: no toca el login
+   ni el mecanismo anti-flash existente, solo se pinta encima. */
+#av-splash{
+  position:fixed;inset:0;z-index:5000;cursor:pointer;
+  background:#04100f;
+  display:flex;align-items:center;justify-content:center;
+  opacity:1;transition:opacity .45s ease;
+}
+#av-splash.av-splash-saliendo{opacity:0;pointer-events:none}
+.av-splash-imgbox{
+  position:relative;overflow:hidden;
+  aspect-ratio:1536/1024;
+  width:min(100vw,calc(100vh * 1536 / 1024));
+  height:min(100vh,calc(100vw * 1024 / 1536));
+  background:url('img/portada-panel-admin.png?v=1') center center / cover no-repeat;
+  container-type:inline-size;container-name:avsplashbox;
+}
+.av-splash-fade{
+  position:absolute;inset:0;
+  background:linear-gradient(180deg,transparent 58%,rgba(4,16,15,.6) 80%,rgba(4,16,15,.95) 100%);
+}
+.av-splash-entrada{
+  position:absolute;left:0;right:0;bottom:3.5cqw;z-index:1;
+  display:flex;justify-content:center;padding:0 4cqw;cursor:default;
+}
+.av-splash-card{
+  cursor:default;text-align:center;max-width:34cqw;width:100%;
+  background:rgba(11,20,19,.85);backdrop-filter:blur(10px);
+  border:1px solid rgba(255,255,255,.16);border-radius:1.2cqw;
+  padding:1.7cqw 2cqw;box-shadow:0 20px 50px rgba(0,0,0,.5);
+}
+.av-splash-titulo{font-size:1.5cqw;font-weight:800;color:#fff;margin-bottom:.6cqw}
+.av-splash-sub{font-size:1.1cqw;color:#a9c4c1;margin-bottom:1.3cqw;line-height:1.5}
+.av-splash-btn{
+  cursor:pointer;border:none;border-radius:20px;
+  background:linear-gradient(135deg,#0b7c7a,#14b8a6);color:#fff;font-weight:800;
+  font-size:1.15cqw;padding:.9cqw 2cqw;box-shadow:0 8px 20px rgba(11,124,122,.4);
+}
+.av-splash-hint{font-size:.85cqw;color:#7a9a97;margin-top:1cqw}
+@media(max-width:700px){
+  .av-splash-card{max-width:78cqw}
+  .av-splash-titulo{font-size:3.2cqw}
+  .av-splash-sub{font-size:2.4cqw}
+  .av-splash-btn{font-size:2.6cqw;padding:1.6cqw 3cqw}
+  .av-splash-hint{font-size:2cqw}
+}
+</style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
@@ -14,6 +66,34 @@
 <script>
 // Ocultar login inmediatamente si hay sesión guardada (evita flash al entrar desde acceso directo)
 try { if(Object.keys(localStorage).some(k=>k.startsWith('sb-')&&k.includes('auth')))document.write('<style>#login-screen{display:none}</style>'); } catch(e){}
+</script>
+
+<div id="av-splash">
+  <div class="av-splash-imgbox">
+    <div class="av-splash-fade"></div>
+    <div class="av-splash-entrada">
+      <div class="av-splash-card">
+        <div class="av-splash-titulo">Bienvenido a AppVitalVet</div>
+        <div class="av-splash-sub">Todo lo que tu clínica necesita, en un solo lugar.</div>
+        <button type="button" class="av-splash-btn" id="btn-av-splash-entrar">Comienza tu camino</button>
+        <div class="av-splash-hint">o toca en cualquier parte para continuar</div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+(function(){
+  var splash = document.getElementById('av-splash');
+  function cerrarAvSplash(){
+    splash.classList.add('av-splash-saliendo');
+    setTimeout(function(){ splash.hidden = true; }, 450);
+  }
+  document.getElementById('btn-av-splash-entrar').addEventListener('click', function(e){
+    e.stopPropagation();
+    cerrarAvSplash();
+  });
+  splash.addEventListener('click', cerrarAvSplash);
+})();
 </script>
 
 <!-- ═══ LOGIN ═══ -->
