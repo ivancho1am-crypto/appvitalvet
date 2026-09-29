@@ -1,0 +1,60 @@
+/* Componentes visuales del panel de estadísticas.
+   Los usan DOS páginas: estadisticas.html (el panel completo) y la pestaña
+   Estadísticas dentro del panel clínico. Se extrajo de estadisticas.html para
+   no tener dos copias que se desincronicen.
+
+   TODO va acotado a `.vv-stats`. No es manía: .card, .card-title, .sec-title,
+   .stat-val y .stat-lbl YA existen con otro aspecto en css/styles.css, que es
+   la hoja del panel clínico. Sin acotar, cargar este archivo allí le cambiaría
+   el diseño a pantallas que no tienen nada que ver.
+   Cada página envuelve su zona de estadísticas en un elemento .vv-stats. */
+.vv-stats .sec-header{display:flex;align-items:center;gap:10px;margin-bottom:16px}
+.vv-stats .sec-icon{font-size:20px}
+.vv-stats .sec-title{font-size:17px;font-weight:700;color:var(--g800)}
+.vv-stats .sec-desc{font-size:12px;color:var(--g400);margin-left:auto}
+.vv-stats .sec-divider{height:3px;background:linear-gradient(90deg,var(--green),transparent);border-radius:2px;margin-bottom:20px;width:60px}
+.vv-stats .kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.vv-stats .kpi{background:#fff;border-radius:14px;padding:20px 22px;box-shadow:0 1px 3px rgba(0,0,0,.07);border:1px solid var(--g200);position:relative;overflow:hidden}
+.vv-stats .kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--c,var(--green))}
+.vv-stats .kpi-val{font-size:32px;font-weight:800;color:var(--c,var(--green));line-height:1;margin-bottom:4px}
+.vv-stats .kpi-label{font-size:12px;color:var(--g600);font-weight:500}
+.vv-stats .kpi-sub{font-size:11px;color:var(--g400);margin-top:4px}
+.vv-stats .kpi-ico{position:absolute;right:16px;top:16px;font-size:28px;opacity:.15}
+.vv-stats .chart-grid{display:grid;gap:16px}
+.vv-stats .g2{grid-template-columns:1fr 1fr}
+.vv-stats .g3{grid-template-columns:repeat(3,1fr)}
+.vv-stats .g4{grid-template-columns:repeat(4,1fr)}
+.vv-stats .g31{grid-template-columns:3fr 1fr}
+.vv-stats .g13{grid-template-columns:1fr 3fr}
+.vv-stats .card{background:#fff;border-radius:14px;padding:20px 22px;box-shadow:0 1px 3px rgba(0,0,0,.07);border:1px solid var(--g200)}
+.vv-stats .card-title{font-size:13px;font-weight:700;color:var(--g800);margin-bottom:4px;display:flex;align-items:center;gap:6px}
+.vv-stats .card-subtitle{font-size:11px;color:var(--g400);margin-bottom:14px}
+.vv-stats .chart-wrap{position:relative}
+.vv-stats .chart-wrap.h160{height:160px}
+.vv-stats .chart-wrap.h200{height:200px}
+.vv-stats .chart-wrap.h240{height:240px}
+.vv-stats .chart-wrap.h280{height:280px}
+.vv-stats .chart-wrap.h320{height:320px}
+.vv-stats .stat-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.vv-stats .stat-pill{background:var(--g100);border-radius:20px;padding:5px 12px;font-size:12px;display:flex;align-items:center;gap:6px}
+.vv-stats .stat-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.vv-stats .stat-val{font-weight:700;color:var(--g800)}
+.vv-stats .stat-lbl{color:var(--g600)}
+.vv-stats .rank-list{display:flex;flex-direction:column;gap:7px;margin-top:8px}
+.vv-stats .rank-item{display:flex;align-items:center;gap:8px;font-size:12px}
+.vv-stats .rank-n{width:18px;color:var(--g400);font-weight:700;text-align:right;flex-shrink:0}
+.vv-stats .rank-bar-wrap{flex:1;background:var(--g100);border-radius:4px;height:8px;overflow:hidden}
+.vv-stats .rank-bar{height:100%;border-radius:4px;background:var(--green);transition:width .5s}
+.vv-stats .rank-name{min-width:130px;color:var(--g700);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vv-stats .rank-cnt{color:var(--g400);font-size:11px;white-space:nowrap}
+.vv-stats .evidence-box{background:linear-gradient(135deg,#ecfdf5,#d1fae5);border:1px solid #6ee7b7;border-radius:12px;padding:16px 20px;margin-top:16px}
+.vv-stats .ev-title{font-size:12px;font-weight:700;color:var(--green-dk);margin-bottom:6px;display:flex;align-items:center;gap:6px}
+.vv-stats .ev-list{list-style:none;display:flex;flex-direction:column;gap:4px}
+.vv-stats .ev-list li{font-size:12px;color:#065f46;display:flex;align-items:flex-start;gap:6px}
+.vv-stats .ev-list li::before{content:'→';color:var(--green);font-weight:700;flex-shrink:0;margin-top:1px}
+/* #loading vive solo en estadisticas.html, no se acota */
+#loading{position:fixed;inset:0;background:#fff;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:16px;z-index:1000}
+.vv-stats .spinner{width:40px;height:40px;border:3px solid var(--g200);border-top-color:var(--green);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+/* #loading vive solo en estadisticas.html, no se acota */
+#loading p{color:var(--g600);font-size:13px}

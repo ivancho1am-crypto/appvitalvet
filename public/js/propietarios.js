@@ -29,7 +29,7 @@ function saveProp() {
     talt: document.getElementById('p-talt').value.trim(), created: new Date().toLocaleDateString('es-CO'),
     consent_at: new Date().toISOString(), consent_version: CONSENT_VERSION
   };
-  props.push(np); DB.set('props', props); closeM('m-prop');
+  props.push(np); DB.set('props', props); espejoProp(np); closeM('m-prop');
   ['p-ced', 'p-nom', 'p-tel', 'p-email', 'p-dir', 'p-cont', 'p-talt'].forEach(id => { const el = document.getElementById(id); if (el) el.value = '' });
   document.getElementById('p-ciu').value = 'Barbosa';
   document.getElementById('p-acepta').checked = false;
@@ -57,6 +57,7 @@ function rProp(q) {
         <button class="btn btn-outline btn-xs" onclick="editProp('${p.id}')">✏️</button>
         <button class="btn btn-outline btn-xs" onclick="abrirHist('${p.id}')">📋</button>
         <button class="btn btn-green btn-xs" onclick="nuevaMas('${p.id}')">+🐾</button>
+        <button class="btn btn-outline btn-xs" onclick="borrarProp('${p.id}')" title="Eliminar (va a la papelera)">🗑️</button>
       </td></tr>`;
   }).join('');
 }
@@ -95,7 +96,7 @@ function updateProp() {
   p.nombre = document.getElementById('ep-nom').value.trim(); p.telefono = document.getElementById('ep-tel').value.trim();
   p.email = document.getElementById('ep-email').value.trim(); p.direccion = document.getElementById('ep-dir').value.trim();
   p.ciudad = document.getElementById('ep-ciu').value.trim(); p.contacto = document.getElementById('ep-cont').value.trim();
-  DB.set('props', props); closeM('m-edit-prop'); rProp(); updSelects(); toast('Propietario actualizado ✓', 'ok');
+  DB.set('props', props); espejoProp(p); closeM('m-edit-prop'); rProp(); updSelects(); toast('Propietario actualizado ✓', 'ok');
   syncPropToCRM(p);
 }
 

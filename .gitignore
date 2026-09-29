@@ -2,3 +2,6 @@ node_modules/
 .env
 .DS_Store
 *.log
+
+# Capturas y registros de las pruebas automatizadas
+.playwright-mcp/

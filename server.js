@@ -12,11 +12,18 @@ const VITABOT_ADMIN_KEY = process.env.VITABOT_ADMIN_KEY || '';
 
 const configScript = `<script>window.__SB_URL="${SB_URL}";window.__SB_KEY="${SB_KEY}";</script>`;
 
+// El dashboard puede recibir su propia conexión (solo lectura, la clave anon es pública)
+// sin activar la sincronización de la app clínica. Útil en local: STATS_SUPABASE_* solo
+// afecta a /estadisticas.html; si no se definen, usa la misma conexión que la app.
+const STATS_URL = process.env.STATS_SUPABASE_URL || SB_URL;
+const STATS_KEY = process.env.STATS_SUPABASE_ANON_KEY || SB_KEY;
+const statsConfigScript = `<script>window.__SB_URL="${STATS_URL}";window.__SB_KEY="${STATS_KEY}";</script>`;
+
 const indexPath = path.join(__dirname, 'public', 'index.html');
 const indexHtml = fs.readFileSync(indexPath, 'utf8').replace('</head>', configScript + '\n</head>');
 
 const estadPath = path.join(__dirname, 'public', 'estadisticas.html');
-const estadHtml = fs.readFileSync(estadPath, 'utf8').replace('</head>', configScript + '\n</head>');
+const estadHtml = fs.readFileSync(estadPath, 'utf8').replace('</head>', statsConfigScript + '\n</head>');
 
 // Security headers — panel admin is internal, never indexed
 app.use((req, res, next) => {
@@ -48,13 +55,19 @@ app.post('/api/sync-patient', async (req, res) => {
   }
 });
 
-app.use(express.static(path.join(__dirname, 'public'), { index: false }));
-
-// Estadisticas dashboard — servir con variables inyectadas
+// Estas dos páginas se sirven con la conexión a Supabase inyectada. Deben registrarse
+// ANTES de express.static: si no, static devuelve el archivo crudo (sin window.__SB_URL/KEY)
+// y la página nunca puede leer datos en vivo (el dashboard caía siempre al snapshot).
 app.get('/estadisticas.html', (req, res) => {
   res.setHeader('Content-Type', 'text/html');
   res.send(estadHtml);
 });
+app.get('/index.html', (req, res) => {
+  res.setHeader('Content-Type', 'text/html');
+  res.send(indexHtml);
+});
+
+app.use(express.static(path.join(__dirname, 'public'), { index: false }));
 
 // SPA fallback — serve index.html for all other routes
 // (app.use sin path, no app.get('*'): Express 4.22 actualizó path-to-regexp

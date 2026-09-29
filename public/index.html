@@ -7,6 +7,7 @@
 <title>VitalVet — Panel Admin</title>
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/css/styles.css">
+<link rel="stylesheet" href="/css/estadisticas.css">
 <style>
 /* ── Portada estilo videojuego (splash de entrada) ──────────────────
    .av-splash-imgbox mantiene SIEMPRE la proporción real de la imagen
@@ -61,6 +62,8 @@
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
 </head>
 <body>
 <script>
@@ -130,6 +133,7 @@ try { if(Object.keys(localStorage).some(k=>k.startsWith('sb-')&&k.includes('auth
         <span class="tb-uname">Iván Durán</span>
       </div>
       <button class="tb-logout" style="background:var(--navy-m)" onclick="(async()=>{await DB.loadAll();boot();toast('Datos sincronizados ✓','ok')})()">🔄 Sincronizar</button>
+      <button class="tb-logout" style="background:var(--navy-m)" onclick="verPapelera()" title="Ver y restaurar lo eliminado">🗑️</button>
       <button class="tb-logout" onclick="doLogout()">Salir</button>
     </div>
   </div>
@@ -143,6 +147,7 @@ try { if(Object.keys(localStorage).some(k=>k.startsWith('sb-')&&k.includes('auth
     <button class="tab-btn" onclick="go('recordatorios',this)"><span class="ti">🔔</span>Recordatorios</button>
     <button class="tab-btn" onclick="go('cotizacion',this)"><span class="ti">💲</span>Cotización</button>
     <button class="tab-btn" onclick="go('informes',this)"><span class="ti">📊</span>Informes</button>
+    <button class="tab-btn" onclick="go('estadisticas',this)"><span class="ti">📈</span>Estadísticas</button>
   </div>
 
   <!-- CONTENT -->
@@ -458,6 +463,314 @@ try { if(Object.keys(localStorage).some(k=>k.startsWith('sb-')&&k.includes('auth
       </div>
     </div>
 
+
+  <!-- ═══ PESTAÑA ESTADÍSTICAS ═══
+       El contenido es el mismo panel de análisis de estadisticas.html; el motor
+       (cálculos y gráficos) vive en js/estadisticas-core.js y lo comparten las
+       dos pantallas. La clase .vv-stats acota los estilos de
+       css/estadisticas.css para que no toquen el resto del panel clínico. -->
+  <div class="page vv-stats" id="page-estadisticas">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:6px">
+      <div style="font-size:12px;color:var(--g500)" id="stats-sello">Calculando…</div>
+      <button class="btn btn-outline btn-xs" style="margin-left:auto" onclick="renderEstadisticas()">🔄 Recalcular</button>
+      <a class="btn btn-outline btn-xs" href="/estadisticas.html" target="_blank">Panel completo ↗</a>
+    </div>
+
+    <!-- ═══════════════════════════════════════════
+         1. RESUMEN GENERAL
+    ═══════════════════════════════════════════ -->
+    <section id="resumen">
+      <div class="sec-header"><span class="sec-icon">📊</span><span class="sec-title">Resumen General</span><span class="sec-desc">Datos totales del sistema</span></div>
+      <div class="sec-divider"></div>
+
+      <div class="kpi-row">
+        <div class="kpi" style="--c:#059669">
+          <div class="kpi-ico">🐾</div>
+          <div class="kpi-val" id="kpi-mas">485</div>
+          <div class="kpi-label">Pacientes registrados</div>
+          <div class="kpi-sub" id="kpi-sub-esp"></div>
+        </div>
+        <div class="kpi" style="--c:#0891b2">
+          <div class="kpi-ico">👤</div>
+          <div class="kpi-val" id="kpi-props">402</div>
+          <div class="kpi-label">Propietarios activos</div>
+          <div class="kpi-sub" id="kpi-sub-prom"></div>
+        </div>
+        <div class="kpi" style="--c:#d97706">
+          <div class="kpi-ico">📋</div>
+          <div class="kpi-val" id="kpi-hist">1,310</div>
+          <div class="kpi-label">Registros clínicos</div>
+          <div class="kpi-sub">Consultas · Cirugías · Preventivo</div>
+        </div>
+        <div class="kpi" style="--c:#7c3aed">
+          <div class="kpi-ico">🔬</div>
+          <div class="kpi-val">12</div>
+          <div class="kpi-label">Tipos de atención</div>
+          <div class="kpi-sub">Consulta · Cirugía · Lab · +9 más</div>
+        </div>
+      </div>
+
+      <!-- Overview charts -->
+      <div class="chart-grid g2" style="margin-top:16px">
+        <div class="card">
+          <div class="card-title">🏥 Distribución de Registros por Tipo</div>
+          <div class="card-subtitle">Total de entradas en historial clínico</div>
+          <div class="chart-wrap h240"><canvas id="ch-tipos"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="card-title">📅 Actividad Clínica — Últimos 18 meses</div>
+          <div class="card-subtitle">Consultas registradas por mes</div>
+          <div class="chart-wrap h240"><canvas id="ch-timeline"></canvas></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════
+         2. DISTRIBUCIÓN PACIENTES
+    ═══════════════════════════════════════════ -->
+    <section id="pacientes" style="padding-top:8px">
+      <div class="sec-header"><span class="sec-icon">🐾</span><span class="sec-title">Distribución de Pacientes</span><span class="sec-desc">Epidemiología descriptiva poblacional</span></div>
+      <div class="sec-divider"></div>
+
+      <div class="chart-grid g4">
+        <div class="card">
+          <div class="card-title">🐕 Especie</div>
+          <div class="card-subtitle">Distribución de la especie</div>
+          <div class="chart-wrap h160"><canvas id="ch-especie"></canvas></div>
+          <div class="stat-row">
+            <div class="stat-pill"><div class="stat-dot" style="background:#059669"></div><span class="stat-val">80.8%</span><span class="stat-lbl">Canino</span></div>
+            <div class="stat-pill"><div class="stat-dot" style="background:#0891b2"></div><span class="stat-val">18.8%</span><span class="stat-lbl">Felino</span></div>
+            <div class="stat-pill"><div class="stat-dot" style="background:#d97706"></div><span class="stat-val">0.8%</span><span class="stat-lbl">Lagomorfo</span></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">⚥ Género</div>
+          <div class="card-subtitle">Macho vs Hembra</div>
+          <div class="chart-wrap h160"><canvas id="ch-genero"></canvas></div>
+          <div class="stat-row">
+            <div class="stat-pill"><div class="stat-dot" style="background:#3b82f6"></div><span class="stat-val">47.2%</span><span class="stat-lbl">Macho</span></div>
+            <div class="stat-pill"><div class="stat-dot" style="background:#ec4899"></div><span class="stat-val">52.8%</span><span class="stat-lbl">Hembra</span></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">✂️ E. Reproductivo</div>
+          <div class="card-subtitle">Esterilización/Castración</div>
+          <div class="chart-wrap h160"><canvas id="ch-repro"></canvas></div>
+          <div class="stat-row">
+            <div class="stat-pill"><div class="stat-dot" style="background:#059669"></div><span class="stat-val">36.8%</span><span class="stat-lbl">Esterilizado</span></div>
+            <div class="stat-pill"><div class="stat-dot" style="background:#f59e0b"></div><span class="stat-val">63.2%</span><span class="stat-lbl">No Esterilizado</span></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">🎂 Grupos de Edad</div>
+          <div class="card-subtitle">Distribución etaria</div>
+          <div class="chart-wrap h160"><canvas id="ch-edad"></canvas></div>
+          <div class="stat-row">
+            <div class="stat-pill"><span class="stat-val">487</span><span class="stat-lbl">con fecha nacimiento</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="chart-grid g2" style="margin-top:16px">
+        <div class="card">
+          <div class="card-title">🐕 Top 10 Razas más frecuentes</div>
+          <div class="card-subtitle">Caninos y felinos · Total de pacientes</div>
+          <div class="rank-list" id="rank-razas"></div>
+        </div>
+        <div class="card">
+          <div class="card-title">🥣 Tipo de Alimentación</div>
+          <div class="card-subtitle">Dieta registrada en ficha clínica</div>
+          <div class="chart-wrap h220"><canvas id="ch-alimento"></canvas></div>
+        </div>
+      </div>
+
+      <div class="evidence-box">
+        <div class="ev-title">🔬 Hallazgos para Medicina Basada en Evidencia</div>
+        <ul class="ev-list">
+          <li><strong>63% de los pacientes</strong> no están esterilizados — oportunidad para campañas de esterilización preventiva y reducción de enfermedades reproductivas (piometra, tumores mamarios)</li>
+          <li><strong>Pinscher (12%) y Criollos (23%)</strong> son las razas dominantes — requieren protocolos adaptados a su perfil sanitario local</li>
+          <li><strong>Grupo etario 1–7 años (59%)</strong> representa la población más activa — ideal para programas de medicina preventiva sostenida</li>
+          <li><strong>Dieta mixta (45%)</strong> es la más común — base para recomendaciones nutricionales personalizadas por raza y edad</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════
+         3. EPIDEMIOLOGÍA CLÍNICA
+    ═══════════════════════════════════════════ -->
+    <section id="epidemiologia" style="padding-top:8px">
+      <div class="sec-header"><span class="sec-icon">🔬</span><span class="sec-title">Epidemiología Clínica</span><span class="sec-desc">Patologías · Medicamentos · Procedimientos</span></div>
+      <div class="sec-divider"></div>
+
+      <div class="chart-grid g2">
+        <div class="card">
+          <div class="card-title">⚕️ Procedimientos Quirúrgicos más frecuentes</div>
+          <div class="card-subtitle">141 cirugías registradas · Tipos de intervención</div>
+          <div class="rank-list" id="rank-cirugia"></div>
+        </div>
+        <div class="card">
+          <div class="card-title">💊 Medicamentos más prescritos</div>
+          <div class="card-subtitle">Principios activos en fórmulas médicas (167 registros)</div>
+          <div class="rank-list" id="rank-meds"></div>
+        </div>
+      </div>
+
+      <div class="chart-grid g2" style="margin-top:16px">
+        <div class="card">
+          <div class="card-title">🏥 Motivos de Consulta</div>
+          <div class="card-subtitle">205 consultas · Motivo principal registrado</div>
+          <div class="chart-wrap h240"><canvas id="ch-motivos"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="card-title">📋 Distribución de Atenciones por Tipo</div>
+          <div class="card-subtitle">Todos los registros en historial clínico</div>
+          <div class="chart-wrap h240"><canvas id="ch-tipos2"></canvas></div>
+        </div>
+      </div>
+
+      <div class="evidence-box">
+        <div class="ev-title">🔬 Hallazgos Quirúrgicos — Evidencia Clínica</div>
+        <ul class="ev-list">
+          <li><strong>OVH (34% de cirugías)</strong> es el procedimiento más frecuente — confirma alta prevalencia de hembras no esterilizadas y demanda en medicina reproductiva</li>
+          <li><strong>Detartraje (14%)</strong> indica alta prevalencia de enfermedad periodontal — oportunidad para protocolos de salud oral preventiva</li>
+          <li><strong>Mastectomía + Piometra (5.7%)</strong> refleja las consecuencias de baja tasa de esterilización — correlación directa con el 63% sin esterilizar</li>
+          <li><strong>Diciclin + Prednisolona + Meloxicam</strong> son los 3 medicamentos más prescritos — perfil antiinflamatorio-antibiótico como patrón dominante</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════
+         4. MEDICINA PREVENTIVA
+    ═══════════════════════════════════════════ -->
+    <section id="preventivo" style="padding-top:8px">
+      <div class="sec-header"><span class="sec-icon">💉</span><span class="sec-title">Medicina Preventiva</span><span class="sec-desc">Cobertura vacunal · Desparasitación · Laboratorio</span></div>
+      <div class="sec-divider"></div>
+
+      <div class="kpi-row">
+        <div class="kpi" style="--c:#059669">
+          <div class="kpi-ico">💉</div>
+          <div class="kpi-val" id="kpi-vacs">232</div>
+          <div class="kpi-label">Vacunaciones aplicadas</div>
+          <div class="kpi-sub" id="kpi-sub-vac"></div>
+        </div>
+        <div class="kpi" style="--c:#0891b2">
+          <div class="kpi-ico">🪱</div>
+          <div class="kpi-val" id="kpi-desps">199</div>
+          <div class="kpi-label">Desparasitaciones</div>
+          <div class="kpi-sub">Interna + Externa</div>
+        </div>
+        <div class="kpi" style="--c:#d97706">
+          <div class="kpi-ico">🧪</div>
+          <div class="kpi-val" id="kpi-labs">234</div>
+          <div class="kpi-label">Exámenes de laboratorio</div>
+          <div class="kpi-sub">Hemograma, Bioquímica, otros</div>
+        </div>
+        <div class="kpi" style="--c:#7c3aed">
+          <div class="kpi-ico">📸</div>
+          <div class="kpi-val" id="kpi-imgs">10</div>
+          <div class="kpi-label">Imágenes diagnósticas</div>
+          <div class="kpi-sub">Rx, Ecografía</div>
+        </div>
+      </div>
+
+      <div class="chart-grid g2" style="margin-top:16px">
+        <div class="card">
+          <div class="card-title">💉 Vacunas más aplicadas</div>
+          <div class="card-subtitle">232 registros de vacunación · Protocolos Nobivac®</div>
+          <div class="rank-list" id="rank-vacunas"></div>
+        </div>
+        <div class="card">
+          <div class="card-title">🪱 Productos de Desparasitación</div>
+          <div class="card-subtitle">199 desparasitaciones registradas</div>
+          <div class="rank-list" id="rank-desp"></div>
+        </div>
+      </div>
+
+      <div class="evidence-box">
+        <div class="ev-title">🔬 Hallazgos Preventivos — Evidencia Clínica</div>
+        <ul class="ev-list">
+          <li><strong>Nobivac DHPPi (23%)</strong> es la vacuna más aplicada — protocolo core WSAVA confirmado como estándar en la clínica</li>
+          <li><strong>Solo 48% de pacientes</strong> tiene registro de vacunación — sugerir programa activo de recordatorios para los 252 sin registro</li>
+          <li><strong>234 laboratorios</strong> representa el mayor volumen individual — el diagnóstico confirmado por laboratorio es práctica frecuente</li>
+          <li><strong>Desparasitación trimestral</strong> — Endogard + Credelio son los productos estándar usados en la clínica</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════
+         5. GEOGRAFÍA
+    ═══════════════════════════════════════════ -->
+    <section id="geografia" style="padding-top:8px">
+      <div class="sec-header"><span class="sec-icon">🗺️</span><span class="sec-title">Geografía y Captación</span><span class="sec-desc">Distribución territorial · Fuentes de referencia</span></div>
+      <div class="sec-divider"></div>
+
+      <div class="chart-grid g2">
+        <div class="card">
+          <div class="card-title">📍 Distribución Geográfica de Pacientes</div>
+          <div class="card-subtitle">Ciudad de residencia del propietario · Top 10 municipios</div>
+          <div class="chart-wrap h280"><canvas id="ch-ciudades"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="card-title">🎯 Fuente de Captación</div>
+          <div class="card-subtitle">¿Cómo llegaron los clientes? · 402 propietarios</div>
+          <div class="chart-wrap h200"><canvas id="ch-fuente"></canvas></div>
+          <div class="stat-row" style="margin-top:14px">
+            <div class="stat-pill"><div class="stat-dot" style="background:#059669"></div><span class="stat-val">35%</span><span class="stat-lbl">Publicidad física</span></div>
+            <div class="stat-pill"><div class="stat-dot" style="background:#0891b2"></div><span class="stat-val">33%</span><span class="stat-lbl">Referidos</span></div>
+            <div class="stat-pill"><div class="stat-dot" style="background:#d97706"></div><span class="stat-val">20%</span><span class="stat-lbl">Sin registro</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="evidence-box">
+        <div class="ev-title">🔬 Hallazgos Geográficos — Estrategia Clínica</div>
+        <ul class="ev-list">
+          <li><strong>Barbosa (69% de pacientes)</strong> es el núcleo de la demanda — confirma posicionamiento local sólido en el municipio sede</li>
+          <li><strong>Puente Nacional + Moniquirá (12%)</strong> representan mercados de expansión con demanda ya activa — considerar telemedicina o jornadas rurales</li>
+          <li><strong>68% via publicidad física + referidos</strong> — estrategia de recomendación boca a boca altamente efectiva; digitalización puede ampliar el alcance</li>
+          <li><strong>Bogotá (10 pacientes)</strong> sugiere casos de alta complejidad referidos desde la capital — potenciar como centro de referencia regional</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════
+         6. ACTIVIDAD CLÍNICA
+    ═══════════════════════════════════════════ -->
+    <section id="actividad" style="padding-top:8px">
+      <div class="sec-header"><span class="sec-icon">📈</span><span class="sec-title">Actividad Clínica</span><span class="sec-desc">Evolución temporal · Volumen de atenciones</span></div>
+      <div class="sec-divider"></div>
+
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-title">📅 Evolución de Consultas — Nov 2024 a Jun 2026</div>
+        <div class="card-subtitle">Número de consultas registradas por mes · Tendencia de crecimiento</div>
+        <div class="chart-wrap h280"><canvas id="ch-timeline2"></canvas></div>
+      </div>
+
+      <div class="chart-grid g2">
+        <div class="card">
+          <div class="card-title">⚖️ Peso Promedio por Especie y Raza</div>
+          <div class="card-subtitle">Datos de peso registrado en ficha clínica</div>
+          <div class="chart-wrap h220"><canvas id="ch-peso"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="card-title">📊 Resumen de Indicadores Clave</div>
+          <div class="card-subtitle">Métricas de gestión clínica</div>
+          <div class="rank-list" style="margin-top:8px" id="rank-kpis"></div>
+        </div>
+      </div>
+
+      <div class="evidence-box" style="margin-top:16px">
+        <div class="ev-title">📈 Tendencias y Proyecciones</div>
+        <ul class="ev-list">
+          <li><strong>Crecimiento sostenido Feb–Mar 2026</strong> (22–24 consultas/mes) sugiere consolidación de la clínica — base para proyección de 300+ consultas anuales</li>
+          <li><strong>1.2 mascotas por propietario</strong> — oportunidad de venta cruzada de servicios preventivos por núcleo familiar</li>
+          <li><strong>Ratio consulta:cirugía = 1.4:1</strong> — alta complejidad promedio indica perfil de clínica de nivel 2–3</li>
+          <li><strong>234 laboratorios vs 10 imágenes</strong> — oportunidad de equipar con ecógrafo/Rx para reducir derivaciones externas</li>
+        </ul>
+      </div>
+    </section>
+
+  </div>
   </div>
 </div>
 
@@ -657,9 +970,37 @@ try { if(Object.keys(localStorage).some(k=>k.startsWith('sb-')&&k.includes('auth
 
 <div class="toast" id="toast"></div>
 
+<!-- Barra para deshacer el último borrado. Aparece 15 segundos; pasado ese
+     tiempo lo borrado sigue recuperable desde la papelera. -->
+<div id="undo-bar" style="display:none;position:fixed;left:50%;transform:translateX(-50%);bottom:24px;
+     z-index:900;background:#1f2937;color:#fff;padding:10px 16px;border-radius:10px;gap:14px;
+     align-items:center;box-shadow:0 8px 24px rgba(0,0,0,.25);font-size:13px"></div>
+
+<!-- ═══ PAPELERA ═══ -->
+<div class="mo" id="m-papelera">
+  <div class="md" style="max-width:860px">
+    <div class="mh"><div class="mt">🗑️ Papelera</div><button class="mx" onclick="closeM('m-papelera')">✕</button></div>
+    <div class="mb">
+      <p style="font-size:12.5px;color:var(--g600);margin:0 0 12px">
+        Lo que se elimina no se destruye: queda aquí y se puede restaurar. Al restaurar
+        vuelve también a las tablas del portal.
+      </p>
+      <div style="overflow:auto">
+        <table>
+          <thead><tr><th>Cuándo</th><th>Qué</th><th>Contenido</th><th>Antigüedad</th><th>Acción</th></tr></thead>
+          <tbody id="papelera-body"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="mf"><button class="btn btn-outline" onclick="closeM('m-papelera')">Cerrar</button></div>
+  </div>
+</div>
+
 <!-- ═══ MÓDULOS JS ═══ -->
 <script src="/js/config.js"></script>
 <script src="/js/db.js"></script>
+<script src="/js/espejo.js"></script>
+<script src="/js/borrado.js"></script>
 <script src="/js/seed.js"></script>
 <script src="/js/helpers.js"></script>
 <script src="/js/modals.js"></script>
@@ -671,6 +1012,8 @@ try { if(Object.keys(localStorage).some(k=>k.startsWith('sb-')&&k.includes('auth
 <script src="/js/seguimiento.js"></script>
 <script src="/js/recordatorios.js"></script>
 <script src="/js/cotizacion.js"></script>
+<script src="/js/estadisticas-core.js"></script>
+<script src="/js/estadisticas-tab.js"></script>
 <script src="/js/informes.js"></script>
 <script src="/js/app.js"></script>
 

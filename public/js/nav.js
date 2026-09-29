@@ -7,6 +7,10 @@ function go(page, btn) {
   if (page === 'informes') { rInfProp(); rInfMas(); rStats() }
   if (page === 'recordatorios') rRecordatorios();
   if (page === 'cotizacion') rCotizacion();
+  // Las estadísticas se calculan al entrar, con los datos que ya están en
+  // memoria. Si nada cambió desde la última vez, no se redibujan (ver
+  // js/estadisticas-tab.js).
+  if (page === 'estadisticas') abrirEstadisticas();
 }
 
 function boot() {
@@ -35,4 +39,10 @@ function rStats() {
           <div style="height:6px;background:${cols[e] || '#22aa86'};border-radius:4px;width:${m.length ? Math.round(cnt / m.length * 100) : 0}%"></div>
         </div></div>`).join('') || '<p style="color:var(--g500);font-size:12px">Sin datos</p>';
   }
+
+  // rStats() ya se ejecuta tras cada alta, edición y borrado, así que es el
+  // punto natural para avisar a la pestaña de Estadísticas. Si está a la vista
+  // se recalcula al instante; si no, se marca y se recalcula al abrirla. Así no
+  // hace falta nada programado preguntando cada tanto si algo cambió.
+  if (typeof marcarEstadisticasDesactualizadas === 'function') marcarEstadisticasDesactualizadas();
 }

@@ -6,13 +6,15 @@
 <title>VitalVet · Estadísticas Clínicas</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+<script src="/js/estadisticas-core.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link rel="stylesheet" href="/css/estadisticas.css">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 :root{
   --green:#059669;--green-lt:#d1fae5;--green-dk:#047857;
   --teal:#0891b2;--teal-lt:#cffafe;
-  --orange:#d97706;--purple:#7c3aed;--pink:#db2777;--red:#ef4444;--blue:#3b82f6;
+  --orange:#d97706;--orange-lt:#fef3c7;--purple:#7c3aed;--purple-lt:#ede9fe;--pink:#db2777;--pink-lt:#fce7f3;--red:#ef4444;--blue:#3b82f6;
   --g50:#f9fafb;--g100:#f3f4f6;--g200:#e5e7eb;--g400:#9ca3af;--g600:#4b5563;--g800:#1f2937;
   --sidebar-w:220px;
 }
@@ -38,6 +40,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .sb-footer{margin-top:auto;padding:16px;border-top:1px solid rgba(255,255,255,.08);color:#6b7280;font-size:10px;line-height:1.6}
 .sb-badge{background:#059669;color:#fff;font-size:9px;padding:1px 6px;border-radius:10px;margin-left:auto;font-weight:700}
 
+
 /* ── MAIN ─────────────────────────────────────────── */
 #main{margin-left:var(--sidebar-w);flex:1;padding:0;display:flex;flex-direction:column;min-height:100vh}
 
@@ -52,77 +55,233 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .tb-right{display:flex;align-items:center;gap:12px}
 .tb-badge{background:var(--green-lt);color:var(--green-dk);font-size:11px;font-weight:600;padding:4px 10px;border-radius:20px}
 .tb-updated{font-size:11px;color:var(--g400)}
+#live-banner{display:none;margin:0 0 16px;padding:12px 16px;border-radius:10px;background:var(--orange-lt);border:1px solid var(--orange);color:#78350f;font-size:13px;line-height:1.5}
+#live-banner .lb-form{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px}
+#live-banner input{padding:7px 10px;border:1px solid var(--g200);border-radius:8px;font-size:13px;min-width:180px}
+#live-banner button{padding:7px 14px;border:0;border-radius:8px;background:var(--green);color:#fff;font-weight:600;font-size:13px;cursor:pointer}
+#live-banner #lb-msg{font-size:12px;color:#7c2d12}
 
 /* Content */
 #content{padding:24px 28px 48px;display:flex;flex-direction:column;gap:28px}
 
 /* Section headers */
-.sec-header{display:flex;align-items:center;gap:10px;margin-bottom:16px}
-.sec-icon{font-size:20px}
-.sec-title{font-size:17px;font-weight:700;color:var(--g800)}
-.sec-desc{font-size:12px;color:var(--g400);margin-left:auto}
-.sec-divider{height:3px;background:linear-gradient(90deg,var(--green),transparent);border-radius:2px;margin-bottom:20px;width:60px}
-
-/* KPI Cards */
-.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
-.kpi{background:#fff;border-radius:14px;padding:20px 22px;box-shadow:0 1px 3px rgba(0,0,0,.07);border:1px solid var(--g200);position:relative;overflow:hidden}
-.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--c,var(--green))}
-.kpi-val{font-size:32px;font-weight:800;color:var(--c,var(--green));line-height:1;margin-bottom:4px}
-.kpi-label{font-size:12px;color:var(--g600);font-weight:500}
-.kpi-sub{font-size:11px;color:var(--g400);margin-top:4px}
-.kpi-ico{position:absolute;right:16px;top:16px;font-size:28px;opacity:.15}
-
-/* Chart cards */
-.chart-grid{display:grid;gap:16px}
-.g2{grid-template-columns:1fr 1fr}
-.g3{grid-template-columns:repeat(3,1fr)}
-.g4{grid-template-columns:repeat(4,1fr)}
-.g31{grid-template-columns:3fr 1fr}
-.g13{grid-template-columns:1fr 3fr}
-.card{background:#fff;border-radius:14px;padding:20px 22px;box-shadow:0 1px 3px rgba(0,0,0,.07);border:1px solid var(--g200)}
-.card-title{font-size:13px;font-weight:700;color:var(--g800);margin-bottom:4px;display:flex;align-items:center;gap:6px}
-.card-subtitle{font-size:11px;color:var(--g400);margin-bottom:14px}
-.chart-wrap{position:relative}
-.chart-wrap.h160{height:160px}
-.chart-wrap.h200{height:200px}
-.chart-wrap.h240{height:240px}
-.chart-wrap.h280{height:280px}
-.chart-wrap.h320{height:320px}
-
-/* Stat pills */
-.stat-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
-.stat-pill{background:var(--g100);border-radius:20px;padding:5px 12px;font-size:12px;display:flex;align-items:center;gap:6px}
-.stat-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
-.stat-val{font-weight:700;color:var(--g800)}
-.stat-lbl{color:var(--g600)}
-
-/* Table-style list */
-.rank-list{display:flex;flex-direction:column;gap:7px;margin-top:8px}
-.rank-item{display:flex;align-items:center;gap:8px;font-size:12px}
-.rank-n{width:18px;color:var(--g400);font-weight:700;text-align:right;flex-shrink:0}
-.rank-bar-wrap{flex:1;background:var(--g100);border-radius:4px;height:8px;overflow:hidden}
-.rank-bar{height:100%;border-radius:4px;background:var(--green);transition:width .5s}
-.rank-name{min-width:130px;color:var(--g700);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.rank-cnt{color:var(--g400);font-size:11px;white-space:nowrap}
-
-/* Evidence callout */
-.evidence-box{background:linear-gradient(135deg,#ecfdf5,#d1fae5);border:1px solid #6ee7b7;border-radius:12px;padding:16px 20px;margin-top:16px}
-.ev-title{font-size:12px;font-weight:700;color:var(--green-dk);margin-bottom:6px;display:flex;align-items:center;gap:6px}
-.ev-list{list-style:none;display:flex;flex-direction:column;gap:4px}
-.ev-list li{font-size:12px;color:#065f46;display:flex;align-items:flex-start;gap:6px}
-.ev-list li::before{content:'→';color:var(--green);font-weight:700;flex-shrink:0;margin-top:1px}
-
-/* Spinner */
-#loading{position:fixed;inset:0;background:#fff;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:16px;z-index:1000}
-.spinner{width:40px;height:40px;border:3px solid var(--g200);border-top-color:var(--green);border-radius:50%;animation:spin .8s linear infinite}
-@keyframes spin{to{transform:rotate(360deg)}}
-#loading p{color:var(--g600);font-size:13px}
+/* Los componentes visuales (tarjetas, KPIs, gráficos, rankings) viven en
+   css/estadisticas.css, compartidos con la pestaña del panel clínico. */
 
 /* Responsive */
 @media(max-width:900px){
   .kpi-row,.g2,.g3,.g4,.g31,.g13{grid-template-columns:1fr!important}
   #sidebar{display:none}
   #main{margin-left:0}
+}
+
+/* ═══════════════════════════════════════════════════
+   COMERCIAL — Estrategia + Protocolos (telaraña)
+   ═══════════════════════════════════════════════════ */
+.draft-badge{background:#fef3c7;color:#92400e;border:1px solid #fcd34d;font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;letter-spacing:.2px;display:inline-flex;align-items:center;gap:5px}
+.draft-badge::before{content:'⚠'}
+
+.chip{display:inline-block;background:var(--g100);color:var(--g600);border-radius:20px;padding:3px 10px;font-size:11px;line-height:1.4}
+.chip-row{display:flex;flex-wrap:wrap;gap:6px}
+
+/* — Estrategia — */
+.seg-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
+.seg-card{background:#fff;border-radius:14px;padding:18px 20px;box-shadow:0 1px 3px rgba(0,0,0,.07);border:1px solid var(--g200);border-left:4px solid var(--nivelc,var(--green));display:flex;flex-direction:column;gap:11px}
+.seg-head{display:flex;align-items:flex-start;gap:10px}
+.seg-esp{font-size:15px;font-weight:700;color:var(--g800);display:flex;align-items:center;gap:7px}
+.seg-sub{font-size:11px;color:var(--g400);margin-top:2px}
+.seg-n{margin-left:auto;text-align:right;flex-shrink:0}
+.seg-n b{font-size:26px;font-weight:800;color:var(--nivelc,var(--green));line-height:1}
+.seg-n span{display:block;font-size:10px;color:var(--g400)}
+.nivel-badge{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;padding:3px 11px;border-radius:20px;color:#fff}
+.seg-block-label{font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--g400)}
+.seg-hook{background:var(--g50);border-left:3px solid var(--nivelc,var(--green));border-radius:0 8px 8px 0;padding:9px 12px;font-size:12px;font-style:italic;color:var(--g600)}
+.seg-proto-btns{display:flex;flex-wrap:wrap;gap:6px}
+.proto-link-btn{background:var(--green-lt);color:var(--green-dk);border:1px solid #6ee7b7;border-radius:8px;padding:5px 10px;font-size:11px;font-weight:600;cursor:pointer;transition:.15s}
+.proto-link-btn:hover{background:var(--green);color:#fff}
+.proto-link-btn.missing{background:var(--g100);color:var(--g400);border-color:var(--g200);cursor:default}
+
+.niveles-block{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:8px}
+.nivel-item{border-radius:12px;padding:14px 16px;border:1px solid var(--g200);background:#fff}
+.nivel-item h4{font-size:13px;font-weight:800;margin-bottom:6px;display:flex;align-items:center;gap:8px;color:var(--g800)}
+.nivel-item p{font-size:11px;color:var(--g600);line-height:1.5}
+.nivel-num{width:24px;height:24px;border-radius:7px;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;flex-shrink:0}
+
+/* — Protocolos — */
+.proto-filter{display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap}
+.filter-btn{background:#fff;border:1px solid var(--g200);border-radius:8px;padding:7px 16px;font-size:12px;font-weight:600;color:var(--g600);cursor:pointer;transition:.15s}
+.filter-btn:hover{border-color:var(--green)}
+.filter-btn.active{background:var(--green);color:#fff;border-color:var(--green)}
+.proto-card{background:#fff;border-radius:14px;padding:20px 22px;box-shadow:0 1px 3px rgba(0,0,0,.07);border:1px solid var(--g200);margin-bottom:20px}
+.proto-card.flash{animation:protoflash 1.3s ease}
+@keyframes protoflash{0%,100%{box-shadow:0 1px 3px rgba(0,0,0,.07)}30%{box-shadow:0 0 0 3px var(--green-lt),0 0 0 5px var(--green)}}
+.proto-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px}
+.proto-title{font-size:16px;font-weight:800;color:var(--g800)}
+.badge{font-size:10px;font-weight:700;padding:3px 9px;border-radius:20px;text-transform:uppercase;letter-spacing:.3px}
+.badge-esp{background:var(--teal-lt);color:#0e7490}
+.badge-prev-alta{background:#fee2e2;color:#b91c1c}
+.badge-prev-media{background:#fef3c7;color:#92400e}
+.badge-prev-baja{background:var(--green-lt);color:var(--green-dk)}
+.ticket{color:var(--orange);font-weight:800;letter-spacing:1px;font-size:14px;margin-left:auto}
+.predis-chips{margin:10px 0 4px}
+
+/* Telaraña (SVG autocontenido) */
+.telarana-wrap{overflow-x:auto;overflow-y:hidden;padding:6px 2px 10px;margin:8px 0 12px}
+.telarana-svg{display:block}
+.tl-node-box{height:100%;border-radius:10px;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;padding:4px 8px;color:#fff;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.15);transition:transform .12s,box-shadow .12s;box-sizing:border-box}
+.tl-node-box:hover,.tl-node.sel .tl-node-box{transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,.28)}
+.tl-node.sel .tl-node-box{outline:3px solid #fff;outline-offset:-3px}
+.tl-node-tipo{font-size:8px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;opacity:.82}
+.tl-node-label{font-size:11px;font-weight:600;line-height:1.15;margin-top:2px}
+.tl-int-box{height:100%;border-radius:9px;background:var(--green-lt);border:1.5px solid var(--green);display:flex;flex-direction:column;justify-content:center;padding:4px 8px;cursor:pointer;box-sizing:border-box;transition:.12s}
+.tl-int-box:hover{background:#a7f3d0}
+.tl-int-lvl{align-self:flex-start;font-size:8px;font-weight:800;color:#fff;padding:1px 6px;border-radius:10px;margin-bottom:3px}
+.tl-int-serv{font-size:9.5px;font-weight:600;color:var(--green-dk);line-height:1.15}
+.tl-int.faded{opacity:.28}
+.tl-int.hl .tl-int-box{box-shadow:0 0 0 2px var(--green),0 4px 12px rgba(5,150,105,.4);background:#a7f3d0}
+.tl-stem{stroke:var(--green);stroke-width:2;stroke-dasharray:3 3;opacity:.5}
+.tl-int.hl .tl-stem{opacity:1;stroke-width:2.5;stroke-dasharray:none}
+.tl-int.faded .tl-stem{opacity:.14}
+.tl-arrow{stroke:var(--g400);stroke-width:2}
+.tl-arrow-head{fill:var(--g400)}
+
+.telarana-detail{background:var(--g50);border:1px solid var(--g200);border-radius:10px;padding:12px 16px;font-size:12px;color:var(--g600);min-height:44px}
+.telarana-detail .tld-title{font-weight:700;color:var(--g800);margin-bottom:6px;font-size:12.5px;display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.telarana-detail ul{list-style:none;display:flex;flex-direction:column;gap:5px;margin:6px 0}
+.telarana-detail li{display:flex;gap:8px;align-items:flex-start;line-height:1.4}
+.tld-lvlpill{font-size:9px;font-weight:800;color:#fff;padding:2px 8px;border-radius:10px;flex-shrink:0;margin-top:1px}
+.tld-gancho{margin-top:8px;padding-top:8px;border-top:1px dashed var(--g200);font-style:italic;color:var(--green-dk)}
+
+.proto-cols{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:16px}
+.proto-col h5{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.proto-col ul{list-style:none;display:flex;flex-direction:column;gap:5px}
+.proto-col li{font-size:11.5px;color:var(--g600);line-height:1.4;padding-left:14px;position:relative}
+.proto-col li::before{content:'•';position:absolute;left:2px;color:var(--g400)}
+.col-labs h5{color:#92400e}.col-hosp h5{color:#b91c1c}.col-tutor h5{color:var(--green-dk)}
+
+.gancho-box{background:linear-gradient(135deg,#ecfdf5,#d1fae5);border:1px solid #6ee7b7;border-radius:12px;padding:14px 18px;margin-top:16px}
+.gancho-box .gb-t{font-size:11px;font-weight:800;color:var(--green-dk);text-transform:uppercase;letter-spacing:.4px;margin-bottom:5px;display:flex;align-items:center;gap:6px}
+.gancho-box p{font-size:12.5px;color:#065f46;line-height:1.5;font-style:italic}
+
+@media(max-width:900px){
+  .seg-grid,.niveles-block,.proto-cols{grid-template-columns:1fr!important}
+}
+
+/* ═══════════════════════════════════════════════════
+   MARKETING — Guía viva de Marketing y Crecimiento
+   ═══════════════════════════════════════════════════ */
+.tmpl-badge{background:#e0f2fe;color:#0369a1;border:1px solid #7dd3fc;font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;letter-spacing:.2px;display:inline-flex;align-items:center;gap:5px}
+.tmpl-badge::before{content:'✎'}
+.tmpl-inline{background:#e0f2fe;color:#0369a1;font-size:10px;font-weight:700;padding:1px 7px;border-radius:10px;margin-left:6px;white-space:nowrap}
+
+.mkt-tabs{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:6px}
+.mkt-tab{
+  --tabc: var(--green);
+  flex:1;min-width:180px;display:flex;align-items:center;justify-content:center;gap:8px;
+  padding:16px 18px;border-radius:16px;border:2px solid var(--g200);background:#fff;
+  color:var(--g600);font-size:15px;font-weight:800;cursor:pointer;transition:.15s;
+  box-shadow:0 1px 3px rgba(0,0,0,.06);
+}
+.mkt-tab:hover{transform:translateY(-2px);box-shadow:0 4px 14px rgba(0,0,0,.1)}
+.mkt-tab.active{background:var(--tabc);border-color:var(--tabc);color:#fff;box-shadow:0 4px 14px rgba(0,0,0,.18)}
+
+.mkt-page{display:flex;flex-direction:column;gap:20px}
+
+.mkt-banner{background:linear-gradient(135deg,var(--purple),var(--pink));border-radius:20px;padding:26px 30px;color:#fff;box-shadow:0 8px 24px rgba(124,58,237,.25);position:relative;overflow:hidden}
+.mkt-banner-ico{font-size:30px;margin-bottom:8px}
+.mkt-banner-title{font-size:20px;font-weight:800;margin-bottom:12px}
+.mkt-banner p{font-size:13.5px;line-height:1.6;margin-bottom:10px;opacity:.95}
+.mkt-banner-cita{margin-top:14px;padding-top:14px;border-top:1px solid rgba(255,255,255,.3);font-style:italic;font-weight:700;font-size:14px}
+
+.mkt-cat-section{margin-bottom:8px}
+.mkt-cat-header{--catc:var(--green);display:flex;align-items:center;gap:8px;font-size:13px;font-weight:800;color:var(--catc);text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px}
+.mkt-cat-dot{width:12px;height:12px;border-radius:50%;background:var(--catc)}
+.mkt-cat-count{margin-left:auto;background:var(--g100);color:var(--g600);border-radius:20px;padding:2px 10px;font-size:11px;text-transform:none;letter-spacing:0}
+
+.mkt-card-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px}
+.mkt-card{--catc:var(--green);background:#fff;border-radius:18px;padding:18px 20px;border:2px solid var(--g200);border-left:6px solid var(--catc);box-shadow:0 1px 3px rgba(0,0,0,.06);transition:box-shadow .15s,transform .15s;display:flex;flex-direction:column;gap:10px}
+.mkt-card:hover{box-shadow:0 6px 18px rgba(0,0,0,.1)}
+.mkt-card.done{background:linear-gradient(180deg,#fff,var(--g50));border-color:var(--catc)}
+.mkt-card-top{display:flex;align-items:flex-start;gap:10px}
+.mkt-card-ico{font-size:26px;line-height:1}
+.mkt-card-headtext{flex:1;min-width:0}
+.mkt-card-num{font-size:10px;font-weight:800;color:var(--g400);text-transform:uppercase;letter-spacing:.4px}
+.mkt-card-title{font-size:14.5px;font-weight:800;color:var(--g800);line-height:1.3}
+.mkt-cat-pill{font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;white-space:nowrap;height:fit-content}
+.mkt-card-resumen{font-size:12.5px;color:var(--g600);line-height:1.5}
+.mkt-entregable{background:var(--g50);border-radius:10px;padding:8px 12px;font-size:12px;color:var(--g600)}
+.mkt-porque{font-size:11.5px;color:var(--g400);font-style:italic}
+.mkt-neuro{background:var(--teal-lt);border-radius:10px;padding:10px 12px;font-size:12px;color:#0e5e6f;line-height:1.5}
+.mkt-neuro-head{font-weight:700;font-size:11.5px;margin-bottom:3px;color:var(--teal)}
+.mkt-hormozi{background:var(--orange-lt);border-radius:10px;padding:10px 12px;font-size:12px;color:#7c4a03;line-height:1.5}
+.mkt-hormozi-head{font-weight:700;font-size:11.5px;margin-bottom:5px;color:var(--orange)}
+.mkt-hormozi > div{margin-bottom:4px}
+
+/* Checkbox grande y satisfactorio (usable por un niño) */
+.mkt-check-wrap{display:flex;align-items:center;flex-shrink:0}
+.mkt-checkbox{appearance:none;-webkit-appearance:none;width:28px;height:28px;border-radius:9px;border:2.5px solid var(--g200);background:#fff;cursor:pointer;transition:.15s;position:relative;flex-shrink:0}
+.mkt-checkbox:hover{border-color:var(--green)}
+.mkt-checkbox:checked{background:var(--green);border-color:var(--green);transform:scale(1.05)}
+.mkt-checkbox:checked::after{content:'✓';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#fff;font-size:16px;font-weight:800}
+.mkt-checkbox.sm{width:22px;height:22px;border-radius:7px}
+.mkt-checkbox.sm:checked::after{font-size:13px}
+
+/* Acordeones genéricos */
+.mkt-acc{border:1px solid var(--g200);border-radius:12px;overflow:hidden}
+.mkt-acc-head{display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--g50);cursor:pointer;font-size:12.5px;font-weight:700;color:var(--g600);user-select:none}
+.mkt-acc-head:hover{background:var(--g100)}
+.mkt-acc-chevron{margin-left:auto;transition:transform .15s;color:var(--g400)}
+.mkt-acc.open .mkt-acc-chevron{transform:rotate(180deg)}
+.mkt-acc-body{display:none;padding:14px 16px;font-size:12.5px;color:var(--g600);line-height:1.6}
+.mkt-acc.open .mkt-acc-body{display:block}
+.mkt-pasos{padding-left:18px;display:flex;flex-direction:column;gap:5px}
+.mkt-list{list-style:none;display:flex;flex-direction:column;gap:5px}
+.mkt-list li::before{content:'•';color:var(--teal);margin-right:6px}
+
+/* Campañas por segmento */
+.mkt-campaign-card{margin-bottom:14px}
+.mkt-camp-head{padding:14px 16px;background:#fff;gap:14px}
+.mkt-camp-ico{font-size:22px}
+.mkt-camp-headtext{flex:1;min-width:0}
+.mkt-camp-title{font-size:14px;font-weight:800;color:var(--g800)}
+.mkt-camp-tema{font-size:11.5px;color:var(--g400);margin-top:1px}
+.mkt-camp-progress{background:var(--teal-lt);color:#0e7490;font-weight:800;font-size:11px;padding:3px 10px;border-radius:20px;white-space:nowrap}
+.mkt-camp-body{background:var(--g50);display:flex;flex-direction:column;gap:10px;padding:14px}
+.mkt-subsec{background:#fff}
+.mkt-subsec .mkt-acc-head{background:#f8fafc}
+.mkt-subsec-ico{font-size:15px}
+.mkt-subsec-label{font-weight:700;font-size:12.5px;color:var(--g800)}
+.mkt-subsec.done .mkt-subsec-label{color:var(--green-dk)}
+
+.mkt-field-title{font-weight:700;color:var(--g800);font-size:12.5px}
+.mkt-meta{color:var(--g400);font-size:11.5px}
+.mkt-quote{background:var(--g50);border-left:3px solid var(--purple);border-radius:0 8px 8px 0;padding:8px 12px;font-style:italic;color:var(--g600);margin:6px 0}
+.mkt-guion{padding-left:18px;display:flex;flex-direction:column;gap:4px}
+.mkt-cta{background:var(--green-lt);color:var(--green-dk);border-radius:8px;padding:8px 12px;font-weight:600;margin-top:4px}
+.mkt-slides{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px}
+.mkt-slide{background:var(--g50);border-radius:8px;padding:8px 10px;font-size:11.5px}
+.mkt-timeline{display:flex;flex-direction:column;gap:8px}
+.mkt-timeline-item{display:flex;gap:10px;align-items:flex-start}
+.mkt-timeline-badge{background:var(--purple);color:#fff;font-size:10px;font-weight:800;padding:3px 9px;border-radius:20px;white-space:nowrap;flex-shrink:0}
+.mkt-bubble{background:#fff;border:1px solid var(--g200);border-radius:10px;padding:6px 10px;margin-top:3px;font-size:11.5px}
+
+/* Progreso */
+.mkt-progress-hero{background:linear-gradient(135deg,var(--green),var(--teal));border-radius:20px;padding:28px;text-align:center;color:#fff;box-shadow:0 8px 24px rgba(5,150,105,.2)}
+.mkt-progress-hero-num{font-size:38px;font-weight:900}
+.mkt-progress-hero-lbl{font-size:13px;opacity:.9;margin-bottom:14px}
+.mkt-progress-hero-pct{font-size:13px;font-weight:700;margin-top:8px}
+.mkt-progress-bar-wrap{background:var(--g100);border-radius:20px;height:14px;overflow:hidden}
+.mkt-progress-bar-wrap.big{height:18px;background:rgba(255,255,255,.25)}
+.mkt-progress-bar-wrap.mini{height:6px;background:var(--g200);margin-bottom:6px}
+.mkt-progress-bar-fill{height:100%;border-radius:20px;transition:width .7s ease}
+.mkt-progress-section-title{font-size:13px;font-weight:800;color:var(--g800);margin:6px 0 4px}
+.mkt-progress-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px}
+.mkt-progress-item{background:#fff;border:1px solid var(--g200);border-radius:12px;padding:12px 14px}
+.mkt-progress-item-lbl{display:flex;justify-content:space-between;font-size:12px;font-weight:700;color:var(--g800);margin-bottom:8px}
+.mkt-progress-item-lbl span{color:var(--g400);font-weight:600}
+
+@media(max-width:900px){
+  .mkt-card-grid,.mkt-progress-grid,.mkt-slides{grid-template-columns:1fr!important}
 }
 </style>
 </head>
@@ -141,6 +300,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
     <div class="sb-logo-title">VitalVet</div>
     <div class="sb-logo-sub">Estadísticas Clínicas · 2024–2026</div>
   </div>
+
 
   <div class="sb-section">Análisis</div>
   <button class="sb-link active" onclick="scrollTo('resumen')"><span class="sb-ico">📊</span>Resumen General</button>
@@ -175,7 +335,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
     </div>
   </div>
 
-  <div id="content">
+  <!-- .vv-stats acota los estilos de css/estadisticas.css (ver ese archivo) -->
+  <div id="content" class="vv-stats">
+
+    <div id="live-banner"></div>
+
 
     <!-- ═══════════════════════════════════════════
          1. RESUMEN GENERAL
@@ -189,13 +353,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
           <div class="kpi-ico">🐾</div>
           <div class="kpi-val" id="kpi-mas">485</div>
           <div class="kpi-label">Pacientes registrados</div>
-          <div class="kpi-sub">392 caninos · 91 felinos · 4 otros</div>
+          <div class="kpi-sub" id="kpi-sub-esp"></div>
         </div>
         <div class="kpi" style="--c:#0891b2">
           <div class="kpi-ico">👤</div>
           <div class="kpi-val" id="kpi-props">402</div>
           <div class="kpi-label">Propietarios activos</div>
-          <div class="kpi-sub">1.2 mascotas promedio por tutor</div>
+          <div class="kpi-sub" id="kpi-sub-prom"></div>
         </div>
         <div class="kpi" style="--c:#d97706">
           <div class="kpi-ico">📋</div>
@@ -352,7 +516,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
           <div class="kpi-ico">💉</div>
           <div class="kpi-val" id="kpi-vacs">232</div>
           <div class="kpi-label">Vacunaciones aplicadas</div>
-          <div class="kpi-sub">48% de la población total</div>
+          <div class="kpi-sub" id="kpi-sub-vac"></div>
         </div>
         <div class="kpi" style="--c:#0891b2">
           <div class="kpi-ico">🪱</div>
@@ -471,12 +635,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
       </div>
     </section>
 
+
   </div><!-- /content -->
 </div><!-- /main -->
 
+
 <script>
 // ── DATOS — fallback estático (se sobreescribe con datos reales de Supabase) ──
-let DATA = {
+DATA = {
   mascotas: 485, propietarios: 402, historial: 1310,
   especies:    { canino:392, felino:91, lagomorfo:4 },
   generos:     { macho:230, hembra:257 },
@@ -497,278 +663,154 @@ let DATA = {
   _vacs:232, _desps:199, _labs:234, _imgs:10,
 };
 
-// ── FETCH Y COMPUTE desde vv_store ─────────────────────────────────────────
+// ── FETCH Y COMPUTE ────────────────────────────────────────────────────────
+// Estado de la conexión: 'live' | 'sin-config' | 'sin-sesion' | 'error'. Sirve para no
+// presentar el snapshot fijo como si fueran datos en vivo (ver renderLiveBanner).
+let SB_STATUS = 'sin-config';
+let SB_CLIENT = null;
+let SB_ORIGEN = 'vv_store';   // 'tablas' | 'vv_store', se muestra en la barra lateral
+let SB_SOLO_PORTAL = 0;       // mascotas registradas en el portal que nunca fueron atendidas
+
+// Lee de las tablas relacionales (tutores / pacientes / historia_clinica) y
+// devuelve los datos con la MISMA forma que tenía vv_store, para que todo el
+// resto del dashboard siga funcionando sin cambios.
+//
+// Por qué leer de aquí y no del JSON: estas tablas son consultables con SQL de
+// verdad. Es lo que permite preguntar "quién no viene hace 6 meses" o "a quién
+// le toca vacuna" sin descargar la clínica entera, que es la base de las
+// campañas de reactivación.
+async function leerDeTablas() {
+  const pagina = async (tabla, cols) => {
+    let out = [], desde = 0;
+    for (;;) {
+      const { data, error } = await SB_CLIENT.from(tabla).select(cols).range(desde, desde + 999);
+      if (error) throw error;
+      out = out.concat(data);
+      if (data.length < 1000) return out;
+      desde += 1000;
+    }
+  };
+  const [tut, pac, his] = await Promise.all([
+    pagina('tutores', 'id,nombre,identificacion,celular,ciudad,como,creado_en,saas_prop_id'),
+    pagina('pacientes', 'id,tutor_id,nombre,especie,raza,genero,fecha_nacimiento,peso_actual,estado_reproductivo,alimento,saas_mas_id'),
+    pagina('historia_clinica', 'id,paciente_id,tipo,fecha,descripcion,medicamentos,peso,saas_hist_id')
+  ]);
+
+  // Este panel mide la CLÍNICA: se cuentan las mascotas que vienen del panel
+  // (saas_mas_id) o que tienen al menos una entrada de historia.
+  //
+  // El filtro no es cosmético. En 2026-09 había 115 pacientes sin dueño y sin
+  // ninguna atención, copias exactas —nombre, raza y fecha de nacimiento— de
+  // pacientes que ya existían: los creaba create_paciente_from_saas, que
+  // insertaba la fila pero devolvía null y sin vincular al tutor. Se borraron y
+  // esa función ya no se usa, pero el filtro se queda como defensa: si este
+  // número vuelve a crecer, es que algo está creando pacientes sueltos otra vez.
+  const conHistoria = new Set(his.map(h => h.paciente_id));
+  const clinicos = pac.filter(p => p.saas_mas_id || conHistoria.has(p.id));
+  const soloPortal = pac.length - clinicos.length;
+
+  const tutoresClinicos = new Set(clinicos.map(p => p.tutor_id));
+  const props = tut
+    .filter(t => t.saas_prop_id || tutoresClinicos.has(t.id))
+    .map(t => ({
+      id: t.id, nombre: t.nombre, cedula: t.identificacion, telefono: t.celular,
+      ciudad: t.ciudad, como: t.como, created: t.creado_en
+    }));
+  const mas = clinicos.map(p => ({
+    id: p.id, pid: p.tutor_id, nombre: p.nombre, esp: p.especie, raza: p.raza,
+    gen: p.genero, fn: p.fecha_nacimiento, peso: p.peso_actual,
+    repr: p.estado_reproductivo, ali: p.alimento
+  }));
+  const hist = his.map(h => ({
+    id: h.id, mid: h.paciente_id, tipo: h.tipo, fecha: h.fecha,
+    desc: h.descripcion, med: h.medicamentos, peso: h.peso
+  }));
+  return { props, mas, hist, _soloPortal: soloPortal };
+}
+
 async function fetchSBData() {
   const url = window.__SB_URL, key = window.__SB_KEY;
-  if (!url || !key) return null;
+  if (!url || !key) { SB_STATUS = 'sin-config'; return null; }
   try {
-    const sb = supabase.createClient(url, key);
-    const { data: { session } } = await sb.auth.getSession();
-    if (!session) return null;
-    const rows = await Promise.all(['props','mas','hist'].map(k =>
-      sb.from('vv_store').select('data').eq('key', k).maybeSingle().then(r => [k, r.data?.data ?? []])
-    ));
-    return Object.fromEntries(rows);
-  } catch(e) { console.warn('estadisticas fetch:', e); return null; }
-}
+    SB_CLIENT = supabase.createClient(url, key);
+    const { data: { session } } = await SB_CLIENT.auth.getSession();
+    if (!session) { SB_STATUS = 'sin-sesion'; return null; }
 
-function buildData(props, mas, hist) {
-  const now = new Date();
-  const cnt = (arr, key) => {
-    const c = {};
-    arr.forEach(x => { const v = x[key]||'Sin registro'; c[v]=(c[v]||0)+1; });
-    return c;
-  };
-  const topN = (obj, n=10) => Object.entries(obj).sort((a,b)=>b[1]-a[1]).slice(0,n);
-
-  const espRaw = cnt(mas,'esp');
-  const especies = { canino:espRaw['canino']||0, felino:espRaw['felino']||0 };
-  Object.entries(espRaw).forEach(([k,v])=>{ if(k!=='canino'&&k!=='felino') especies[k]=(especies[k]||0)+v; });
-
-  const generos = { macho:0, hembra:0 };
-  mas.forEach(m=>{ if(m.gen==='macho') generos.macho++; else if(m.gen==='hembra') generos.hembra++; });
-
-  const repro = { esterilizado:0, no_esterilizado:0 };
-  mas.forEach(m=>{ if(m.repr==='esterilizado') repro.esterilizado++; else if(m.repr==='no_esterilizado') repro.no_esterilizado++; });
-
-  const ge = { '< 1 año':0, '1–3 años':0, '3–7 años':0, '7–12 años':0, '> 12 años':0 };
-  mas.forEach(m=>{ if(!m.fn) return; const y=(now-new Date(m.fn))/(365.25*864e5); if(y<1) ge['< 1 año']++; else if(y<3) ge['1–3 años']++; else if(y<7) ge['3–7 años']++; else if(y<12) ge['7–12 años']++; else ge['> 12 años']++; });
-
-  const aliRaw = cnt(mas,'ali'); delete aliRaw['Sin registro']; delete aliRaw[''];
-  const alimentos = aliRaw;
-
-  const tipoMap = { laboratorio:'Laboratorio',vacunacion:'Vacunación',consulta:'Consulta',desparasitacion:'Desparasitación',formula:'Fórmula Médica',cirugia:'Cirugía',seguimiento:'Seguimiento',hospitalizacion:'Hospitalización',documento:'Documento',orden:'Orden',imagen:'Imagen',remision:'Remisión',peluqueria:'Peluquería',guarderia:'Guardería',cita:'Cita',mensaje:'Mensaje' };
-  const tiposRaw = cnt(hist,'tipo');
-  const tipos_hist = Object.fromEntries(Object.entries(tiposRaw).map(([k,v])=>[tipoMap[k]||k,v]));
-
-  const grpBy = (arr, key) => { const c={}; arr.forEach(x=>{ const v=(x[key]||'').trim(); if(v.length>1) c[v]=(c[v]||0)+1; }); return c; };
-  const cirugias  = topN(grpBy(hist.filter(h=>h.tipo==='cirugia'),'desc'),10);
-
-  const parseMeds = (arr) => { const c={}; arr.forEach(h=>{ if(!h.med) return; h.med.split(/[,;\n]/).forEach(m=>{ const s=m.trim(); if(s.length>2) c[s]=(c[s]||0)+1; }); }); return c; };
-  const medicamentos   = topN(parseMeds(hist),8);
-  const vacunas        = topN(parseMeds(hist.filter(h=>h.tipo==='vacunacion')),8);
-  const desparasitantes= topN(parseMeds(hist.filter(h=>h.tipo==='desparasitacion')),8);
-  const motivos        = topN(grpBy(hist.filter(h=>h.tipo==='consulta'),'desc'),8);
-
-  const ciudades = topN(cnt(props,'ciudad'),10);
-
-  const fMap = { recom:'Referido',google:'Google',redes:'Redes sociales',pub:'Publicidad física',facebook:'Facebook',insta:'Instagram',web:'Página web' };
-  const fRaw = {}; props.forEach(p=>{ const f=fMap[p.como]||(p.como?p.como:'Sin registro'); fRaw[f]=(fRaw[f]||0)+1; });
-  const fuentes = fRaw;
-
-  const tlRaw = {}; hist.forEach(h=>{ if(!h.fecha) return; const ym=h.fecha.slice(0,7); if(/^\d{4}-\d{2}$/.test(ym)) tlRaw[ym]=(tlRaw[ym]||0)+1; });
-  const timeline = Object.fromEntries(Object.entries(tlRaw).sort());
-
-  const pRaw={}, pCnt={}; mas.forEach(m=>{ if(m.raza&&m.peso&&+m.peso>0){ pRaw[m.raza]=(pRaw[m.raza]||0)+ +m.peso; pCnt[m.raza]=(pCnt[m.raza]||0)+1; } });
-  const pesos_razas = Object.entries(pRaw).map(([r,s])=>[r,+(s/pCnt[r]).toFixed(1)]).sort((a,b)=>b[1]-a[1]).slice(0,8);
-
-  return {
-    mascotas:mas.length, propietarios:props.length, historial:hist.length,
-    especies, generos, repro, grupos_edad:ge, razas_top:topN(cnt(mas,'raza'),10),
-    alimentos, tipos_hist, cirugias, medicamentos, vacunas, desparasitantes,
-    motivos, ciudades, fuentes, timeline, pesos_razas,
-    _vacs:hist.filter(h=>h.tipo==='vacunacion').length,
-    _desps:hist.filter(h=>h.tipo==='desparasitacion').length,
-    _labs:hist.filter(h=>h.tipo==='laboratorio').length,
-    _imgs:hist.filter(h=>h.tipo==='imagen').length,
-  };
-}
-
-function updateKPIs() {
-  const set = (id,v) => { const el=document.getElementById(id); if(el) el.textContent=v; };
-  set('kpi-mas',   DATA.mascotas.toLocaleString('es-CO'));
-  set('kpi-props', DATA.propietarios.toLocaleString('es-CO'));
-  set('kpi-hist',  DATA.historial.toLocaleString('es-CO'));
-  set('kpi-vacs',  DATA._vacs);
-  set('kpi-desps', DATA._desps);
-  set('kpi-labs',  DATA._labs);
-  set('kpi-imgs',  DATA._imgs);
-  set('tb-pacientes', DATA.mascotas + ' pacientes');
-}
-
-// ── COLORES ────────────────────────────────────────────────────────────────
-const C = {
-  green:'#059669', teal:'#0891b2', orange:'#d97706', purple:'#7c3aed',
-  pink:'#db2777', red:'#ef4444', blue:'#3b82f6', yellow:'#eab308',
-  palette:['#059669','#0891b2','#d97706','#7c3aed','#db2777','#ef4444','#3b82f6','#eab308','#64748b','#14b8a6','#f97316','#84cc16']
-};
-
-// ── HELPERS ────────────────────────────────────────────────────────────────
-function fmtN(n){ return n>=1000?(n/1000).toFixed(1)+'k':n.toString() }
-const defOpts = (extra={}) => ({
-  responsive:true, maintainAspectRatio:false,
-  plugins:{ legend:{ display:false }, tooltip:{ callbacks:{} } },
-  ...extra
-});
-
-function rankList(id, data, color=C.green, maxVal=null){
-  const el = document.getElementById(id); if(!el) return;
-  const max = maxVal || Math.max(...data.map(d=>d[1]));
-  el.innerHTML = data.map(([name,val],i) =>
-    `<div class="rank-item">
-      <div class="rank-n">${i+1}</div>
-      <div class="rank-name" title="${name}">${name}</div>
-      <div class="rank-bar-wrap"><div class="rank-bar" style="width:${(val/max*100).toFixed(1)}%;background:${color}"></div></div>
-      <div class="rank-cnt">${val}</div>
-    </div>`
-  ).join('');
-}
-
-// ── CHARTS ────────────────────────────────────────────────────────────────
-function initCharts(){
-  Chart.register(ChartDataLabels);
-
-  // Distribución de tipos de historial (donut)
-  new Chart(document.getElementById('ch-tipos'), {
-    type:'doughnut',
-    data:{ labels:Object.keys(DATA.tipos_hist), datasets:[{ data:Object.values(DATA.tipos_hist), backgroundColor:C.palette, borderWidth:2, borderColor:'#fff' }] },
-    options:{ ...defOpts(), plugins:{ legend:{ display:true, position:'right', labels:{ font:{size:10}, boxWidth:10, padding:8 } }, datalabels:{ display:false } } }
-  });
-
-  // Timeline consultas
-  const tlKeys = Object.keys(DATA.timeline);
-  const tlVals = Object.values(DATA.timeline);
-  new Chart(document.getElementById('ch-timeline'), {
-    type:'line',
-    data:{ labels:tlKeys, datasets:[{ data:tlVals, borderColor:C.green, backgroundColor:'rgba(5,150,105,.1)', fill:true, tension:.4, pointRadius:4, pointBackgroundColor:C.green }] },
-    options:{ ...defOpts(), plugins:{ legend:{display:false}, datalabels:{display:false} }, scales:{ x:{ ticks:{font:{size:10},maxRotation:45} }, y:{ beginAtZero:true, ticks:{stepSize:5} } } }
-  });
-
-  // Especie (donut)
-  new Chart(document.getElementById('ch-especie'), {
-    type:'doughnut',
-    data:{ labels:['Canino','Felino','Lagomorfo'], datasets:[{ data:[392,91,4], backgroundColor:[C.green,C.teal,C.orange], borderWidth:2, borderColor:'#fff' }] },
-    options:{ ...defOpts(), cutout:'68%', plugins:{ legend:{display:false}, datalabels:{ display:true, color:'#fff', font:{weight:'bold',size:11}, formatter:(v,ctx)=>{ const tot=ctx.dataset.data.reduce((a,b)=>a+b,0); return (v/tot*100).toFixed(0)+'%'; } } } }
-  });
-
-  // Género
-  new Chart(document.getElementById('ch-genero'), {
-    type:'doughnut',
-    data:{ labels:['Macho','Hembra'], datasets:[{ data:[230,257], backgroundColor:[C.blue,C.pink], borderWidth:2, borderColor:'#fff' }] },
-    options:{ ...defOpts(), cutout:'68%', plugins:{ legend:{display:false}, datalabels:{ display:true, color:'#fff', font:{weight:'bold',size:11}, formatter:(v,ctx)=>{ const tot=487; return (v/tot*100).toFixed(0)+'%'; } } } }
-  });
-
-  // Reproductivo
-  new Chart(document.getElementById('ch-repro'), {
-    type:'doughnut',
-    data:{ labels:['Esterilizado','No Esterilizado'], datasets:[{ data:[178,305], backgroundColor:[C.green,C.orange], borderWidth:2, borderColor:'#fff' }] },
-    options:{ ...defOpts(), cutout:'68%', plugins:{ legend:{display:false}, datalabels:{ display:true, color:'#fff', font:{weight:'bold',size:11}, formatter:(v,ctx)=>{ const tot=483; return (v/tot*100).toFixed(0)+'%'; } } } }
-  });
-
-  // Grupos edad (bar)
-  new Chart(document.getElementById('ch-edad'), {
-    type:'bar',
-    data:{ labels:Object.keys(DATA.grupos_edad), datasets:[{ data:Object.values(DATA.grupos_edad), backgroundColor:[C.teal,C.green,'#10b981',C.orange,C.red], borderRadius:6 }] },
-    options:{ ...defOpts(), plugins:{ legend:{display:false}, datalabels:{ display:true, color:'#fff', font:{weight:'700',size:10}, anchor:'center', align:'center' } }, scales:{ x:{ticks:{font:{size:9}}}, y:{display:false} } }
-  });
-
-  // Razas (rank list)
-  rankList('rank-razas', DATA.razas_top, C.green);
-
-  // Alimento (donut)
-  new Chart(document.getElementById('ch-alimento'), {
-    type:'doughnut',
-    data:{
-      labels:['Dieta Mixta','Sin Dato','Concentrado','Natural','Comercial'],
-      datasets:[{ data:[220,130,69,6,5], backgroundColor:[C.green,C.palette[8],C.teal,C.orange,C.yellow], borderWidth:2, borderColor:'#fff' }]
-    },
-    options:{ ...defOpts(), plugins:{ legend:{ display:true, position:'right', labels:{font:{size:11},boxWidth:12,padding:10} }, datalabels:{ display:true, color:'#fff', font:{weight:'bold',size:11}, formatter:(v,ctx)=>{ const tot=430; return (v/tot*100).toFixed(0)+'%'; } } } }
-  });
-
-  // Cirugías y medicamentos (rank lists)
-  rankList('rank-cirugia', DATA.cirugias, C.purple);
-  rankList('rank-meds', DATA.medicamentos, C.teal);
-
-  // Motivos (bar horizontal)
-  const motLabels = DATA.motivos.map(m=>m[0]);
-  const motVals   = DATA.motivos.map(m=>m[1]);
-  new Chart(document.getElementById('ch-motivos'), {
-    type:'bar',
-    data:{ labels:motLabels, datasets:[{ data:motVals, backgroundColor:[C.green,...Array(6).fill(C.palette[8])], borderRadius:6 }] },
-    options:{ ...defOpts(), indexAxis:'y', plugins:{ legend:{display:false}, datalabels:{ display:true, color:'#374151', font:{size:10}, anchor:'end', align:'right' } }, scales:{ x:{display:false}, y:{ticks:{font:{size:11}}} } }
-  });
-
-  // Tipos 2 (bar)
-  const t2L = Object.keys(DATA.tipos_hist);
-  const t2V = Object.values(DATA.tipos_hist);
-  new Chart(document.getElementById('ch-tipos2'), {
-    type:'bar',
-    data:{ labels:t2L, datasets:[{ data:t2V, backgroundColor:C.palette, borderRadius:5 }] },
-    options:{ ...defOpts(), plugins:{ legend:{display:false}, datalabels:{ display:true, color:'#fff', font:{weight:'700',size:10}, anchor:'center', align:'center', formatter:v=>v>10?v:'' } }, scales:{ x:{ticks:{font:{size:9},maxRotation:45}}, y:{beginAtZero:true,display:false} } }
-  });
-
-  // Vacunas y desparasitantes (rank lists)
-  rankList('rank-vacunas', DATA.vacunas, C.green);
-  rankList('rank-desp', DATA.desparasitantes, C.teal);
-
-  // Ciudades (bar horizontal)
-  new Chart(document.getElementById('ch-ciudades'), {
-    type:'bar',
-    data:{
-      labels: DATA.ciudades.map(c=>c[0]),
-      datasets:[{ data:DATA.ciudades.map(c=>c[1]), backgroundColor:[C.green,...Array(9).fill(C.teal)], borderRadius:5 }]
-    },
-    options:{ ...defOpts(), indexAxis:'y', plugins:{ legend:{display:false}, datalabels:{ display:true, color:'#374151', font:{size:11,weight:'700'}, anchor:'end', align:'right' } }, scales:{ x:{display:false}, y:{ticks:{font:{size:12}}} } }
-  });
-
-  // Fuentes (doughnut)
-  new Chart(document.getElementById('ch-fuente'), {
-    type:'doughnut',
-    data:{
-      labels: Object.keys(DATA.fuentes),
-      datasets:[{ data:Object.values(DATA.fuentes), backgroundColor:[C.green,C.teal,C.palette[8],C.orange,C.blue,C.purple], borderWidth:2, borderColor:'#fff' }]
-    },
-    options:{ ...defOpts(), cutout:'60%', plugins:{ legend:{ display:true, position:'right', labels:{font:{size:10},boxWidth:10,padding:6} }, datalabels:{ display:false } } }
-  });
-
-  // Timeline grande
-  new Chart(document.getElementById('ch-timeline2'), {
-    type:'line',
-    data:{
-      labels: Object.keys(DATA.timeline),
-      datasets:[{
-        label:'Consultas', data:Object.values(DATA.timeline),
-        borderColor:C.green, backgroundColor:'rgba(5,150,105,.08)', fill:true,
-        tension:.35, pointRadius:5, pointBackgroundColor:C.green, pointBorderColor:'#fff', pointBorderWidth:2
-      }]
-    },
-    options:{
-      ...defOpts(),
-      plugins:{ legend:{display:false}, datalabels:{ display:true, color:C.green, font:{weight:'700',size:10}, align:'top', formatter:v=>v>3?v:'' } },
-      scales:{ x:{ ticks:{font:{size:11},maxRotation:45}, grid:{display:false} }, y:{ beginAtZero:true, ticks:{stepSize:5}, grid:{color:'rgba(0,0,0,.05)'} } }
+    // Primero las tablas relacionales. Si algo falla ahí, se cae a vv_store,
+    // que sigue siendo la fuente de verdad de la clínica: más vale un dato
+    // bueno de la fuente vieja que un dashboard roto.
+    try {
+      const rel = await leerDeTablas();
+      if (rel.props.length && rel.mas.length) {
+        SB_STATUS = 'live'; SB_ORIGEN = 'tablas';
+        SB_SOLO_PORTAL = rel._soloPortal || 0;
+        rel._updated = {};
+        return rel;
+      }
+      console.warn('estadisticas: las tablas relacionales vinieron vacías, uso vv_store');
+    } catch (e) {
+      console.warn('estadisticas: no pude leer las tablas relacionales, uso vv_store:', e.message || e);
     }
-  });
 
-  // Peso por raza (bar)
-  new Chart(document.getElementById('ch-peso'), {
-    type:'bar',
-    data:{
-      labels: DATA.pesos_razas.map(p=>p[0]),
-      datasets:[{ data:DATA.pesos_razas.map(p=>p[1]), backgroundColor:C.palette, borderRadius:6 }]
-    },
-    options:{ ...defOpts(), plugins:{ legend:{display:false}, datalabels:{ display:true, color:'#fff', font:{weight:'700',size:10}, anchor:'center', align:'center', formatter:v=>v+'kg' } }, scales:{ x:{ticks:{font:{size:10},maxRotation:45}}, y:{beginAtZero:true,ticks:{callback:v=>v+'kg'}} } }
-  });
-
-  // KPIs rank
-  const kpiData = [
-    ['Total pacientes', 485, 500],
-    ['Propietarios', 402, 500],
-    ['Registros clínicos', 1310, 1500],
-    ['Consultas / mes promedio', 11, 30],
-    ['% con vacunas', 48, 100],
-    ['% esterilizados', 37, 100],
-    ['Razas registradas', 42, 100],
-    ['Municipios atendidos', 20, 50],
-  ];
-  rankList('rank-kpis', kpiData, C.green, 1500);
+    SB_ORIGEN = 'vv_store';
+    const rows = await Promise.all(['props','mas','hist'].map(k =>
+      SB_CLIENT.from('vv_store').select('data, updated_at').eq('key', k).maybeSingle().then(r => [k, r])
+    ));
+    // Un error de lectura o una colección ausente NO se convierte en "0 registros":
+    // se cae al snapshot y se avisa, para no mostrar un dashboard vacío como si fuera real.
+    if (rows.some(([, r]) => r.error || !r.data || !Array.isArray(r.data.data))) {
+      console.warn('estadisticas: lectura de vv_store incompleta', rows.map(([k, r]) => [k, r.error?.message || (r.data ? 'ok' : 'sin fila')]));
+      SB_STATUS = 'error';
+      return null;
+    }
+    SB_STATUS = 'live';
+    const out = Object.fromEntries(rows.map(([k, r]) => [k, r.data.data]));
+    out._updated = Object.fromEntries(rows.map(([k, r]) => [k, r.data.updated_at]));
+    return out;
+  } catch(e) { console.warn('estadisticas fetch:', e); SB_STATUS = 'error'; return null; }
 }
 
-// ── SIDEBAR NAVIGATION ────────────────────────────────────────────────────
+// Aviso visible cuando NO son datos en vivo + acceso de solo lectura para iniciar sesión.
+function renderLiveBanner() {
+  const el = document.getElementById('live-banner');
+  if (!el || SB_STATUS === 'live') return;
+  const why = {
+    'sin-config': 'El servidor no tiene la conexión a Supabase configurada (arráncalo con tools/start-local.sh).',
+    'sin-sesion': 'Inicia sesión con tu usuario de AppVitalVet para leer los datos reales.',
+    'error':      'No se pudo leer Supabase (¿sesión vencida o sin permisos?). Revisa la consola del navegador.'
+  }[SB_STATUS];
+  el.innerHTML =
+    '<div class="lb-txt"><strong>⚠ Datos NO en vivo.</strong> Estás viendo un snapshot fijo guardado en el código ' +
+    '(' + DATA.mascotas + ' mascotas · ' + DATA.propietarios + ' propietarios · ' + DATA.historial + ' registros) ' +
+    'que puede no coincidir con la app. ' + why + '</div>' +
+    (SB_STATUS === 'sin-sesion' || SB_STATUS === 'error'
+      ? '<form class="lb-form" id="lb-form"><input type="email" id="lb-email" placeholder="correo" autocomplete="username" required>' +
+        '<input type="password" id="lb-pass" placeholder="contraseña" autocomplete="current-password" required>' +
+        '<button type="submit">Ver datos en vivo</button><span id="lb-msg"></span></form>'
+      : '');
+  el.style.display = 'block';
+  const f = document.getElementById('lb-form');
+  if (f) f.addEventListener('submit', async ev => {
+    ev.preventDefault();
+    const msg = document.getElementById('lb-msg'); msg.textContent = 'Verificando…';
+    const { error } = await SB_CLIENT.auth.signInWithPassword({
+      email: document.getElementById('lb-email').value.trim(),
+      password: document.getElementById('lb-pass').value
+    });
+    if (error) { msg.textContent = 'Credenciales incorrectas'; return; }
+    window.location.reload();
+  });
+}
+
+// buildData(), initCharts() y sus ayudantes viven en js/estadisticas-core.js,
+// compartidos con la pestaña Estadísticas del panel clínico.
+
+// ── NAVEGACIÓN DEL MENÚ LATERAL ───────────────────────────────────────────
 function scrollTo(id){
   const el = document.getElementById(id);
   if(el){ el.scrollIntoView({ behavior:'smooth', block:'start' }); }
   document.querySelectorAll('.sb-link').forEach(l=>l.classList.remove('active'));
-  event.currentTarget.classList.add('active');
+  if(event && event.currentTarget) event.currentTarget.classList.add('active');
 }
 
 // ── INIT ─────────────────────────────────────────────────────────────────
@@ -777,15 +819,36 @@ window.addEventListener('DOMContentLoaded', async () => {
   const live = await fetchSBData();
   if (live) {
     DATA = buildData(live.props, live.mas, live.hist);
-    updateKPIs();
     // Auto-refresh cada 5 minutos
     setTimeout(() => window.location.reload(), 5 * 60 * 1000);
   }
+  // updateKPIs() va SIEMPRE, con datos en vivo o con el snapshot. Antes solo
+  // corría con datos en vivo porque las cifras del snapshot estaban escritas a
+  // mano en el HTML; ahora los subtítulos se calculan, y sin esta llamada
+  // quedarían en blanco al abrir el panel sin sesión.
+  updateKPIs();
 
   const fmt = new Date().toLocaleString('es-CO',{dateStyle:'medium',timeStyle:'short'});
-  const tag = live ? 'En vivo · ' : 'Snapshot · ';
-  document.getElementById('tb-date').textContent = tag + fmt;
-  document.getElementById('sb-updated').textContent = `Última actualización: ${fmt}`;
+  if (live) {
+    document.getElementById('tb-date').textContent = 'En vivo · ' + fmt;
+    if (SB_ORIGEN === 'tablas') {
+      document.getElementById('sb-updated').innerHTML =
+        `Tablas relacionales · ${DATA.propietarios} tutores · ${DATA.mascotas} pacientes · ${DATA.historial} registros` +
+        // Diagnóstico, no oportunidad de negocio: si esto crece, algo está
+        // creando pacientes sin vincular y hay que revisarlo.
+        (SB_SOLO_PORTAL ? `<div style="margin-top:6px;color:var(--g400)">${SB_SOLO_PORTAL} paciente(s) en las tablas sin origen en el panel ni atenciones</div>` : '');
+    } else {
+      // Fecha de cada colección: permite ver de un vistazo si los datos están al día.
+      const d = k => live._updated[k] ? new Date(live._updated[k]).toLocaleDateString('es-CO',{day:'numeric',month:'short'}) : '?';
+      document.getElementById('sb-updated').textContent =
+        `vv_store (respaldo) · propietarios ${d('props')} · mascotas ${d('mas')} · historial ${d('hist')}`;
+    }
+  } else {
+    // Snapshot: no lleva la fecha de hoy (parecería fresco); se etiqueta como fijo y se avisa arriba.
+    document.getElementById('tb-date').textContent = 'Snapshot fijo · NO en vivo';
+    document.getElementById('sb-updated').textContent = 'Datos: snapshot fijo del código (no en vivo)';
+    renderLiveBanner();
+  }
 
   document.getElementById('loading').style.display = 'none';
   initCharts();

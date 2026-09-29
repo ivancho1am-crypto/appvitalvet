@@ -21,7 +21,9 @@ const DB = {
   loadAll: async () => {
     const sb = getSB();
     if (!sb) return;
-    const keys = ['props', 'mas', 'hist', 'segs', 'procs', 'cots', 'recs'];
+    // 'papelera' guarda lo eliminado para poder restaurarlo (ver js/borrado.js).
+    // Tiene que estar aquí o no se descargaría en los demás dispositivos.
+    const keys = ['props', 'mas', 'hist', 'segs', 'procs', 'cots', 'recs', 'papelera'];
     const meta = JSON.parse(localStorage.getItem('vv_meta') || '{}');
     for (const k of keys) {
       try {

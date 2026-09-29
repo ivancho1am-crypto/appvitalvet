@@ -510,49 +510,15 @@ async function saveHist() {
   if (archivos.length) h.archivos = archivos;
   const hist = DB.get('hist'); hist.push(h);
   await DB.set('hist', hist);
-  syncHistoriaClinica(h);
+  espejoHist(h);
   closeM('m-hist'); toast('Entrada guardada ✓', 'ok');
   showHT(h.tipo); buildHistNav(); rHistList(); rStats();
 }
 
-// Escribe la entrada en historia_clinica para que el Portal pueda leerla
-function syncHistoriaClinica(h) {
-  const sb = getSB();
-  if (!sb) return;
-  const mas = DB.get('mas').find(m => m.id === h.mid);
-  if (!mas || !mas.paciente_id) return;
-
-  // Normalizar fecha a ISO (el SaaS la guarda como 'YYYY-MM-DD HH:mm')
-  let fechaISO = new Date().toISOString();
-  if (h.fecha) {
-    try { fechaISO = new Date(h.fecha.replace(' ', 'T')).toISOString(); } catch { /* usar now */ }
-  }
-
-  const entry = {
-    paciente_id:       mas.paciente_id,
-    tipo:              h.tipo,
-    fecha:             fechaISO,
-    descripcion:       h.desc        || null,
-    diagnostico:       h.diag        || null,
-    tratamiento:       h.trat        || null,
-    medicamentos:      h.med         || null,
-    observaciones:     h.not         || null,
-    vacuna:            h.vacuna      || null,
-    laboratorio:       h.lab         || null,
-    lote:              h.lote        || null,
-    via_administracion: h.via        || null,
-    producto:          h.producto    || null,
-    dosis:             h.dosis       || null,
-    prox_control:      (h.prox && h.prox !== '') ? h.prox : null,
-    veterinario:       h.vet         || null,
-    saas_hist_id:      h.id,
-    fuente:            'saas'
-  };
-
-  sb.from('historia_clinica')
-    .upsert(entry, { onConflict: 'saas_hist_id' })
-    .then(({ error }) => { if (error) console.warn('historia_clinica sync:', error); });
-}
+// El antiguo syncHistoriaClinica vivía aquí. Nunca llegó a escribir nada:
+// se cortaba en `if (!mas.paciente_id) return` y ese campo jamás se llenó
+// (0 de 611 mascotas lo tenían). Lo reemplaza espejoHist() en js/espejo.js,
+// que busca el paciente por saas_mas_id y crea la cadena si falta.
 
 function editHist(id) {
   const h = DB.get('hist').find(x => x.id === id); if (!h) return;
@@ -581,6 +547,7 @@ function editHist(id) {
       if (newFiles.length) updated.archivos = [...(hist[idx].archivos || []), ...newFiles];
       hist[idx] = updated;
       await DB.set('hist', hist);
+      espejoHist(updated);
     }
     closeM('m-hist'); toast('Entrada actualizada ✓', 'ok');
     showHT(hist[idx]?.tipo); buildHistNav();
@@ -591,6 +558,7 @@ function editHist(id) {
 function delHist(id, tipo) {
   if (!confirm('¿Eliminar este registro?')) return;
   const hist = DB.get('hist').filter(x => x.id !== id); DB.set('hist', hist);
+  espejoBorrarHist(id);
   const firstItem = document.querySelector('.hn-item');
   if (firstItem && firstItem.classList.contains('on')) { showHT('historia_general'); }
   else { showHT(tipo); }
@@ -608,6 +576,7 @@ async function deleteArchivoHist(histId, fileUrl) {
   if (!h) return;
   h.archivos = (h.archivos || []).filter(f => f.url !== fileUrl);
   await DB.set('hist', hist);
+  espejoHist(h);   // la lista de archivos vive en datos_extra
   showHT(h.tipo); buildHistNav();
   toast('Archivo eliminado ✓', 'ok');
 }

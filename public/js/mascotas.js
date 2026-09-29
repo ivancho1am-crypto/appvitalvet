@@ -20,28 +20,12 @@ async function saveMas() {
     created: new Date().toLocaleDateString('es-CO')
   };
 
-  // Vincular con pacientes del Portal si existe tutor con la misma cédula
-  const sb = getSB();
-  if (sb) {
-    const prop = DB.get('props').find(p => p.id === pid);
-    if (prop && prop.cedula) {
-      try {
-        const { data: pacienteId } = await sb.rpc('create_paciente_from_saas', {
-          p_cedula:  prop.cedula,
-          p_nombre:  nom,
-          p_especie: esp || null,
-          p_raza:    nm.raza || null,
-          p_genero:  nm.gen  || null,
-          p_fn:      nm.fn   || null,
-          p_peso:    nm.peso || null,
-          p_chip:    nm.chip || null
-        });
-        if (pacienteId) nm.paciente_id = pacienteId;
-      } catch (e) { console.warn('saveMas: create_paciente_from_saas:', e); }
-    }
-  }
-
   const mas = DB.get('mas'); mas.push(nm); DB.set('mas', mas);
+  // Espejo a la tabla `pacientes` (ver js/espejo.js). Reemplaza a la antigua
+  // llamada a create_paciente_from_saas, que devolvía null y por eso ninguna
+  // de las 611 mascotas llegó a tener paciente_id. El enlace ahora vive en
+  // pacientes.saas_mas_id, no dentro de vv_store.
+  espejoMas(nm);
   updSelects(); rMas(); rHistList(); rStats(); closeM('m-mas');
   toast('Mascota guardada ✓ — Abriendo historia clínica...', 'ok');
   setTimeout(() => { go('historia', document.querySelectorAll('.tab-btn')[2]); setTimeout(() => openHist(nm.id), 200) }, 1200);
@@ -61,7 +45,10 @@ function rMas(f) {
       <td>${m.peso ? m.peso + ' kg' : '—'}</td>
       <td>${p ? `<div class="cn">${p.nombre}</div><div class="cs">${p.telefono || ''}</div>` : '—'}</td>
       <td style="font-size:11px;text-transform:capitalize">${(m.repr || '').replace('_', ' ') || '—'}</td>
-      <td><button class="btn btn-green btn-xs" onclick="openHist('${m.id}')">📋 Historia</button></td>
+      <td style="white-space:nowrap">
+        <button class="btn btn-green btn-xs" onclick="openHist('${m.id}')">📋 Historia</button>
+        <button class="btn btn-outline btn-xs" onclick="borrarMas('${m.id}')" title="Eliminar (va a la papelera)">🗑️</button>
+      </td>
     </tr>`;
   }).join('') || '<tr><td colspan="8" style="text-align:center;padding:30px;color:var(--g500)">Sin mascotas</td></tr>';
 }
