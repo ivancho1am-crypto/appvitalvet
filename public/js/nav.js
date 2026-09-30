@@ -15,14 +15,18 @@ function go(page, btn) {
   if (page === 'inicio' && typeof rDashboard === 'function') rDashboard();
   // Agenda: igual que Informes/Estadísticas, se recalcula al entrar.
   if (page === 'agenda' && typeof rAgenda === 'function') rAgenda();
+  // Inventario: igual que Agenda, se recalcula al entrar.
+  if (page === 'inventario' && typeof rInventario === 'function') rInventario();
 }
 
 function boot() {
   updSelects(); rProp(); rMas(); rHistList(); rSeg(); rRecordatorios(); rCotizacion(); rInfProp(); rInfMas(); rStats();
   if (typeof rDashboard === 'function') rDashboard();
-  // Solo el contador del sidebar (citas de hoy), no la lista completa: la
-  // lista se calcula recién cuando se entra a la pestaña (arriba en go()).
+  // Solo el contador del sidebar (citas de hoy / bajo stock), no la lista
+  // completa: la lista se calcula recién cuando se entra a la pestaña (arriba
+  // en go()).
   if (typeof _actualizarBadge === 'function') _actualizarBadge();
+  if (typeof _invActualizarBadge === 'function') _invActualizarBadge();
 }
 
 function rStats() {

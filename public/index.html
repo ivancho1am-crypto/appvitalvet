@@ -174,6 +174,9 @@ try { if(Object.keys(localStorage).some(k=>k.startsWith('sb-')&&k.includes('auth
       <button class="tab-btn sidebar-item" data-module-status="existing" onclick="go('estadisticas',this)">
         <span class="si-ico">📈</span><span>Estadísticas</span>
       </button>
+      <button class="tab-btn sidebar-item" data-module-status="existing" onclick="go('inventario',this)">
+        <span class="si-ico">📦</span><span>Inventario</span><span class="si-badge" id="inv-n">0</span>
+      </button>
 
       <div class="sidebar-section">Próximamente</div>
       <!-- Solo interfaz: sin onclick, sin rutas, sin funciones. Ninguno de estos
@@ -182,7 +185,6 @@ try { if(Object.keys(localStorage).some(k=>k.startsWith('sb-')&&k.includes('auth
       <button class="sidebar-item module-coming-soon" data-module-status="new" disabled><span class="si-ico">🔪</span><span>Cirugía</span><span class="si-soon">Pronto</span></button>
       <button class="sidebar-item module-coming-soon" data-module-status="new" disabled><span class="si-ico">🧪</span><span>Laboratorio</span><span class="si-soon">Pronto</span></button>
       <button class="sidebar-item module-coming-soon" data-module-status="new" disabled><span class="si-ico">📡</span><span>Imagenología</span><span class="si-soon">Pronto</span></button>
-      <button class="sidebar-item module-coming-soon" data-module-status="new" disabled><span class="si-ico">📦</span><span>Inventario</span><span class="si-soon">Pronto</span></button>
       <button class="sidebar-item module-coming-soon" data-module-status="new" disabled><span class="si-ico">💰</span><span>Finanzas</span><span class="si-soon">Pronto</span></button>
       <button class="sidebar-item module-coming-soon" data-module-status="new" disabled><span class="si-ico">📣</span><span>Marketing</span><span class="si-soon">Pronto</span></button>
       <button class="sidebar-item module-coming-soon" data-module-status="new" disabled><span class="si-ico">⚙️</span><span>Automatizaciones</span><span class="si-soon">Pronto</span></button>
@@ -962,6 +964,35 @@ try { if(Object.keys(localStorage).some(k=>k.startsWith('sb-')&&k.includes('auth
     </section>
 
     </div><!-- /page-estadisticas -->
+
+    <!-- ══ INVENTARIO ══ -->
+    <div class="page" id="page-inventario">
+      <div class="sec-hdr">
+        <div><div class="sec-title">📦 Inventario</div></div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-outline" onclick="invAbrirMovimiento()">↕ Registrar movimiento</button>
+          <button class="btn btn-green" onclick="invAbrirNuevoProducto()">+ Nuevo producto</button>
+        </div>
+      </div>
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-hdr"><div class="card-title">⚠️ Bajo stock</div></div>
+        <div class="card-body" id="inv-alerta"></div>
+      </div>
+      <div class="card">
+        <div class="card-hdr">
+          <div class="card-title">📦 Catálogo</div>
+          <div class="ftabs">
+            <button class="ftab on" onclick="fInv('todos',this)">Todos</button>
+            <button class="ftab" onclick="fInv('medicamento',this)">💊 Medicamentos</button>
+            <button class="ftab" onclick="fInv('vacuna',this)">💉 Vacunas</button>
+            <button class="ftab" onclick="fInv('insumo_quirurgico',this)">🩹 Insumos</button>
+            <button class="ftab" onclick="fInv('alimento',this)">🥫 Alimento</button>
+            <button class="ftab" onclick="fInv('otro',this)">📦 Otro</button>
+          </div>
+        </div>
+        <div id="inv-tabla"></div>
+      </div>
+    </div>
     </div><!-- /main-content -->
   </div><!-- /app-main -->
   </div><!-- /app-shell -->
@@ -1148,6 +1179,74 @@ try { if(Object.keys(localStorage).some(k=>k.startsWith('sb-')&&k.includes('auth
   </div>
 </div>
 
+<!-- NUEVO/EDITAR PRODUCTO (Inventario) -->
+<div class="mo" id="m-inv-prod">
+  <div class="md">
+    <div class="mh"><div class="mt" id="m-inv-prod-titulo">📦 Nuevo producto</div><button class="mx" onclick="closeM('m-inv-prod')">✕</button></div>
+    <div class="mb">
+      <input type="hidden" id="inv-prod-id">
+      <div class="fg">
+        <div class="fi ff"><label>Nombre *</label><input type="text" id="inv-p-nombre" placeholder="Ej. Nobivac DA2PP"></div>
+        <div class="fi"><label>Categoría *</label>
+          <select id="inv-p-cat">
+            <option value="medicamento">💊 Medicamento</option>
+            <option value="vacuna">💉 Vacuna</option>
+            <option value="insumo_quirurgico">🩹 Insumo quirúrgico</option>
+            <option value="alimento">🥫 Alimento</option>
+            <option value="otro">📦 Otro</option>
+          </select></div>
+        <div class="fi"><label>Unidad</label><input type="text" id="inv-p-unidad" placeholder="unidad / ml / caja..."></div>
+        <div class="fi"><label>Stock mínimo</label><input type="number" id="inv-p-min" placeholder="0" min="0" step="1"></div>
+        <div class="fi"><label>Costo unitario</label><input type="number" id="inv-p-costo" placeholder="Opcional" min="0"></div>
+        <div class="fi"><label>Precio de venta</label><input type="number" id="inv-p-precio" placeholder="Opcional" min="0"></div>
+        <div class="fi ff"><label>Proveedor</label><input type="text" id="inv-p-prov" placeholder="Opcional"></div>
+      </div>
+    </div>
+    <div class="mf">
+      <button class="btn btn-outline" onclick="closeM('m-inv-prod')">Cancelar</button>
+      <button class="btn btn-green" id="inv-p-save-btn" onclick="invGuardarProducto()">💾 Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- REGISTRAR MOVIMIENTO (Inventario) -->
+<div class="mo" id="m-inv-mov">
+  <div class="md">
+    <div class="mh"><div class="mt">↕ Registrar movimiento</div><button class="mx" onclick="closeM('m-inv-mov')">✕</button></div>
+    <div class="mb">
+      <div class="fg">
+        <div class="fi ff"><label>Producto *</label><select id="inv-m-prod"></select></div>
+        <div class="fi"><label>Acción *</label>
+          <select id="inv-m-accion"><option value="entrada">⬆️ Entrada</option><option value="salida">⬇️ Salida</option></select></div>
+        <div class="fi"><label>Cantidad *</label><input type="number" id="inv-m-cant" placeholder="0" min="0" step="any"></div>
+        <div class="fi ff"><label>Motivo *</label>
+          <select id="inv-m-motivo">
+            <option value="compra">Compra (entrada)</option>
+            <option value="uso_clinico">Uso clínico (salida)</option>
+            <option value="merma">Merma / vencido (salida)</option>
+            <option value="ajuste">Ajuste de conteo</option>
+            <option value="devolucion">Devolución de proveedor (salida)</option>
+            <option value="otro">Otro</option>
+          </select></div>
+        <div class="fi ff"><label>Nota</label><textarea id="inv-m-nota" placeholder="Opcional" style="min-height:55px"></textarea></div>
+      </div>
+    </div>
+    <div class="mf">
+      <button class="btn btn-outline" onclick="closeM('m-inv-mov')">Cancelar</button>
+      <button class="btn btn-green" id="inv-m-save-btn" onclick="invGuardarMovimiento()">💾 Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- HISTORIAL DE MOVIMIENTOS (Inventario, solo lectura) -->
+<div class="mo" id="m-inv-hist">
+  <div class="md">
+    <div class="mh"><div class="mt" id="m-inv-hist-titulo">🕓 Historial</div><button class="mx" onclick="closeM('m-inv-hist')">✕</button></div>
+    <div class="mb"><div id="inv-hist-lista"></div></div>
+    <div class="mf"><button class="btn btn-outline" onclick="closeM('m-inv-hist')">Cerrar</button></div>
+  </div>
+</div>
+
 <!-- PROCEDIMIENTO -->
 <div class="mo" id="m-proc">
   <div class="md">
@@ -1249,6 +1348,11 @@ try { if(Object.keys(localStorage).some(k=>k.startsWith('sb-')&&k.includes('auth
 <script src="/js/agenda/agenda-repository.js"></script>
 <script src="/js/agenda/agenda-service.js"></script>
 <script src="/js/agenda/agenda-ui.js"></script>
+<!-- inventario/* va después de los mismos módulos base, por la misma razón
+     que agenda/*, y antes de app.js. -->
+<script src="/js/inventario/inventario-repository.js"></script>
+<script src="/js/inventario/inventario-service.js"></script>
+<script src="/js/inventario/inventario-ui.js"></script>
 <script src="/js/app.js"></script>
 
 </body>
