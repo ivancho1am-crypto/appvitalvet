@@ -11,10 +11,13 @@ function go(page, btn) {
   // memoria. Si nada cambió desde la última vez, no se redibujan (ver
   // js/estadisticas-tab.js).
   if (page === 'estadisticas') abrirEstadisticas();
+  // Inicio: recalcular al entrar, igual que Informes/Estadísticas.
+  if (page === 'inicio' && typeof rDashboard === 'function') rDashboard();
 }
 
 function boot() {
   updSelects(); rProp(); rMas(); rHistList(); rSeg(); rRecordatorios(); rCotizacion(); rInfProp(); rInfMas(); rStats();
+  if (typeof rDashboard === 'function') rDashboard();
 }
 
 function rStats() {

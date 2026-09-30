@@ -115,46 +115,213 @@ try { if(Object.keys(localStorage).some(k=>k.startsWith('sb-')&&k.includes('auth
   </div>
 </div>
 
-<!-- ═══ APP ═══ -->
+<!-- ═══ APP ═══
+     Capa de navegación (sidebar + topbar nueva) envuelve la app existente en
+     .app-shell / .app-main. Las páginas (.page), los modales (.mo) y TODA la
+     lógica de cada módulo siguen exactamente igual — esto es solo el "mueble"
+     de alrededor. Cada botón del sidebar conserva la clase "tab-btn" (aparte
+     de la nueva "sidebar-item") porque go() en nav.js selecciona por esa
+     clase para quitar el estado activo; cambiarle el nombre habría roto la
+     navegación sin tocar nav.js. -->
 <div id="app">
+<div class="app-shell">
 
-  <!-- TOPBAR -->
-  <div class="topbar">
-    <div class="tb-brand">
-      <div class="tb-logo">🐾</div>
-      <div>
-        <div class="tb-name">Vital<span>Vet</span></div>
+  <!-- SIDEBAR -->
+  <aside class="sidebar" id="app-sidebar">
+    <div class="sidebar-brand">
+      <div class="sidebar-brand-ic">🐾</div>
+      <div class="sidebar-brand-txt">
+        <div class="sidebar-brand-name">VitalVet</div>
+        <div class="sidebar-brand-sub">Clínica Veterinaria</div>
+      </div>
+      <button class="sidebar-toggle" onclick="toggleSidebar()" title="Colapsar/expandir">◀</button>
+    </div>
+
+    <div class="sidebar-scroll">
+      <div class="sidebar-section">Principal</div>
+      <button class="tab-btn sidebar-item on" data-module-status="existing" onclick="go('inicio',this)">
+        <span class="si-ico">🏠</span><span>Inicio</span>
+      </button>
+
+      <div class="sidebar-section">Gestión clínica</div>
+      <button class="tab-btn sidebar-item" data-module-status="existing" onclick="go('propietario',this)">
+        <span class="si-ico">👤</span><span>Propietarios</span>
+      </button>
+      <button class="tab-btn sidebar-item" data-module-status="existing" onclick="go('mascota',this)">
+        <span class="si-ico">🐾</span><span>Mascotas</span>
+      </button>
+      <button class="tab-btn sidebar-item" data-module-status="existing" onclick="go('historia',this)">
+        <span class="si-ico">📋</span><span>Historias Clínicas</span>
+      </button>
+      <button class="tab-btn sidebar-item" data-module-status="existing" onclick="go('seguimiento',this)">
+        <span class="si-ico">🏥</span><span>Seguimiento</span><span class="si-badge" id="seg-n">0</span>
+      </button>
+      <button class="tab-btn sidebar-item" data-module-status="existing" onclick="go('recordatorios',this)">
+        <span class="si-ico">🔔</span><span>Recordatorios</span>
+      </button>
+
+      <div class="sidebar-section">Gestión</div>
+      <button class="tab-btn sidebar-item" data-module-status="existing" onclick="go('cotizacion',this)">
+        <span class="si-ico">💲</span><span>Cotizaciones</span>
+      </button>
+      <button class="tab-btn sidebar-item" data-module-status="existing" onclick="go('informes',this)">
+        <span class="si-ico">📊</span><span>Informes</span>
+      </button>
+      <button class="tab-btn sidebar-item" data-module-status="existing" onclick="go('estadisticas',this)">
+        <span class="si-ico">📈</span><span>Estadísticas</span>
+      </button>
+
+      <div class="sidebar-section">Próximamente</div>
+      <!-- Solo interfaz: sin onclick, sin rutas, sin funciones. Ninguno de estos
+           módulos existe todavía — por eso no llaman a go() ni a nada. -->
+      <button class="sidebar-item module-coming-soon" data-module-status="new" disabled><span class="si-ico">📅</span><span>Agenda</span><span class="si-soon">Pronto</span></button>
+      <button class="sidebar-item module-coming-soon" data-module-status="new" disabled><span class="si-ico">🛏️</span><span>Hospitalización avanzada</span><span class="si-soon">Pronto</span></button>
+      <button class="sidebar-item module-coming-soon" data-module-status="new" disabled><span class="si-ico">🔪</span><span>Cirugía</span><span class="si-soon">Pronto</span></button>
+      <button class="sidebar-item module-coming-soon" data-module-status="new" disabled><span class="si-ico">🧪</span><span>Laboratorio</span><span class="si-soon">Pronto</span></button>
+      <button class="sidebar-item module-coming-soon" data-module-status="new" disabled><span class="si-ico">📡</span><span>Imagenología</span><span class="si-soon">Pronto</span></button>
+      <button class="sidebar-item module-coming-soon" data-module-status="new" disabled><span class="si-ico">📦</span><span>Inventario</span><span class="si-soon">Pronto</span></button>
+      <button class="sidebar-item module-coming-soon" data-module-status="new" disabled><span class="si-ico">💰</span><span>Finanzas</span><span class="si-soon">Pronto</span></button>
+      <button class="sidebar-item module-coming-soon" data-module-status="new" disabled><span class="si-ico">📣</span><span>Marketing</span><span class="si-soon">Pronto</span></button>
+      <button class="sidebar-item module-coming-soon" data-module-status="new" disabled><span class="si-ico">⚙️</span><span>Automatizaciones</span><span class="si-soon">Pronto</span></button>
+      <button class="sidebar-item module-coming-soon" data-module-status="new" disabled><span class="si-ico">🤖</span><span>IA</span><span class="si-soon">Pronto</span></button>
+    </div>
+
+    <div class="sidebar-foot">
+      <button class="sidebar-item" onclick="verPapelera()" title="Ver y restaurar lo eliminado">
+        <span class="si-ico">🗑️</span><span>Papelera</span>
+      </button>
+      <button class="sidebar-item" onclick="doLogout()">
+        <span class="si-ico">🚪</span><span>Salir</span>
+      </button>
+    </div>
+  </aside>
+
+  <div class="app-main">
+
+    <!-- TOPBAR NUEVA — conserva Sincronizar tal cual (DB.loadAll()+boot()) -->
+    <div class="app-topbar">
+      <div class="app-search">
+        <span class="app-search-ic">🔍</span>
+        <input type="text" id="global-search" placeholder="Buscar propietario o mascota..."
+          oninput="globalSearch(this.value)" onblur="setTimeout(()=>{const r=document.getElementById('global-search-results'); if(r) r.classList.remove('show')},150)">
+        <div class="app-search-results" id="global-search-results"></div>
+      </div>
+      <span class="tb-badge" id="seg-badge" style="background:var(--surface);color:var(--brand-dark)">🏥 0 en seguimiento</span>
+      <button class="tb-logout" style="background:var(--brand-dark)" onclick="(async()=>{await DB.loadAll();boot();toast('Datos sincronizados ✓','ok')})()">🔄 Sincronizar</button>
+      <div class="tb-user" style="background:var(--surface)">
+        <div class="tb-av" style="background:linear-gradient(135deg,var(--brand),var(--brand-dk));color:#fff">ID</div>
+        <span class="tb-uname" style="color:var(--ink)">Iván Durán</span>
       </div>
     </div>
-    <div class="tb-right">
-      <span class="tb-badge" id="seg-badge">🏥 0 en seguimiento</span>
-      <div class="tb-user">
-        <div class="tb-av">ID</div>
-        <span class="tb-uname">Iván Durán</span>
+
+    <!-- CONTENT -->
+    <div class="main-content">
+
+    <!-- ══ INICIO ══ -->
+    <div class="page on" id="page-inicio">
+      <div class="dash-header">
+        <div>
+          <div class="dash-title" id="dash-saludo">Buenos días 👋</div>
+          <div class="dash-sub">Resumen de la actividad de tu clínica</div>
+        </div>
       </div>
-      <button class="tb-logout" style="background:var(--navy-m)" onclick="(async()=>{await DB.loadAll();boot();toast('Datos sincronizados ✓','ok')})()">🔄 Sincronizar</button>
-      <button class="tb-logout" style="background:var(--navy-m)" onclick="verPapelera()" title="Ver y restaurar lo eliminado">🗑️</button>
-      <button class="tb-logout" onclick="doLogout()">Salir</button>
+
+      <div class="dashboard-grid">
+
+        <!-- KPIs -->
+        <div class="kpi-row">
+          <div class="kpi-card" style="--c:var(--brand)">
+            <div class="kc-ic">👥</div><div class="kc-val" id="dash-kpi-props">0</div><div class="kc-lbl">Propietarios</div>
+          </div>
+          <div class="kpi-card" style="--c:#0071e2">
+            <div class="kc-ic">🐾</div><div class="kc-val" id="dash-kpi-mas">0</div><div class="kc-lbl">Mascotas</div>
+          </div>
+          <div class="kpi-card" style="--c:#c434d1">
+            <div class="kc-ic">📋</div><div class="kc-val" id="dash-kpi-hist">0</div><div class="kc-lbl">Historias clínicas</div>
+          </div>
+          <div class="kpi-card" style="--c:#ef5350">
+            <div class="kc-ic">🏥</div><div class="kc-val" id="dash-kpi-segs">0</div><div class="kc-lbl">En seguimiento</div>
+          </div>
+        </div>
+
+        <!-- Acciones rápidas + financiero -->
+        <div class="dash-cols-2" style="grid-template-columns:2.2fr 1fr">
+          <div class="quick-actions">
+            <button class="qa-btn" onclick="openM('m-prop')"><div class="qa-ic">👤</div><div class="qa-lbl">Nuevo propietario</div></button>
+            <button class="qa-btn" onclick="openM('m-mas')"><div class="qa-ic">🐾</div><div class="qa-lbl">Nueva mascota</div></button>
+            <button class="qa-btn" onclick="openHistModal()"><div class="qa-ic">📋</div><div class="qa-lbl">Nueva historia</div></button>
+            <button class="qa-btn" onclick="openM('m-seg')"><div class="qa-ic">🏥</div><div class="qa-lbl">Nuevo seguimiento</div></button>
+          </div>
+          <div class="kpi-card kpi-finance">
+            <div class="kc-lbl">💰 Gestión financiera</div>
+            <div class="kc-val">Próximamente</div>
+            <div class="kc-soon">Módulo futuro</div>
+          </div>
+        </div>
+
+        <!-- Seguimiento + Recordatorios -->
+        <div class="dash-cols-2">
+          <div class="widget-card">
+            <div class="widget-hdr">
+              <div class="widget-title">🏥 Seguimiento activo</div>
+              <button class="widget-link" onclick="go('seguimiento',document.querySelector('.sidebar-item[onclick*=seguimiento]'))">Ver todo →</button>
+            </div>
+            <div class="widget-body" id="dash-seg-resumen"></div>
+          </div>
+          <div class="widget-card">
+            <div class="widget-hdr">
+              <div class="widget-title">🔔 Recordatorios próximos</div>
+              <button class="widget-link" onclick="go('recordatorios',document.querySelector('.sidebar-item[onclick*=recordatorios]'))">Ver todo →</button>
+            </div>
+            <div class="widget-body" id="dash-rec-resumen"></div>
+          </div>
+        </div>
+
+        <!-- Pacientes recientes + especies -->
+        <div class="dash-cols-2">
+          <div class="widget-card">
+            <div class="widget-hdr">
+              <div class="widget-title">🐾 Pacientes recientes</div>
+              <button class="widget-link" onclick="go('mascota',document.querySelector('.sidebar-item[onclick*=mascota]'))">Ver todas →</button>
+            </div>
+            <div class="widget-body" id="dash-recientes"></div>
+          </div>
+          <div class="widget-card">
+            <div class="widget-hdr"><div class="widget-title">🐶 Distribución por especie</div></div>
+            <div class="widget-body" id="dash-especies"></div>
+          </div>
+        </div>
+
+        <!-- Actividad reciente -->
+        <div class="widget-card">
+          <div class="widget-hdr"><div class="widget-title">🕓 Actividad reciente</div></div>
+          <div class="widget-body" id="dash-actividad"></div>
+        </div>
+
+        <!-- Promoción (sutil, máx. 1 principal + 1 secundaria) -->
+        <div class="promo-row">
+          <div class="promo-card">
+            <div class="promo-tag">Contenido recomendado</div>
+            <div class="promo-title">Profilaxis dental preventiva</div>
+            <div class="promo-txt">La enfermedad periodontal es una de las causas más frecuentes de consulta en mascotas adultas. Revisar el estado dental en cada control de rutina ayuda a detectarla a tiempo.</div>
+          </div>
+          <div class="educational-card">
+            <div class="promo-tag">Servicio destacado</div>
+            <div class="promo-title">Plan de vacunación</div>
+            <div class="promo-txt">Mantén al día el esquema de vacunación de tus pacientes desde la pestaña Recordatorios.</div>
+            <div class="ad-slot">Espacio informativo</div>
+          </div>
+        </div>
+
+        <div style="text-align:center">
+          <button class="widget-link" style="font-size:12px" onclick="go('estadisticas',document.querySelector('.sidebar-item[onclick*=estadisticas]'))">📈 Ver estadísticas completas →</button>
+        </div>
+
+      </div>
     </div>
-  </div>
-
-  <!-- TABS NAV -->
-  <div class="tabs-nav">
-    <button class="tab-btn on" onclick="go('propietario',this)"><span class="ti">👤</span>Propietarios</button>
-    <button class="tab-btn" onclick="go('mascota',this)"><span class="ti">🐾</span>Mascotas</button>
-    <button class="tab-btn" onclick="go('historia',this)"><span class="ti">📋</span>Historias Clínicas</button>
-    <button class="tab-btn" onclick="go('seguimiento',this)"><span class="ti">🏥</span>Seguimiento<span class="tab-badge" id="seg-n">0</span></button>
-    <button class="tab-btn" onclick="go('recordatorios',this)"><span class="ti">🔔</span>Recordatorios</button>
-    <button class="tab-btn" onclick="go('cotizacion',this)"><span class="ti">💲</span>Cotización</button>
-    <button class="tab-btn" onclick="go('informes',this)"><span class="ti">📊</span>Informes</button>
-    <button class="tab-btn" onclick="go('estadisticas',this)"><span class="ti">📈</span>Estadísticas</button>
-  </div>
-
-  <!-- CONTENT -->
-  <div class="main-content">
 
     <!-- ══ PROPIETARIOS ══ -->
-    <div class="page on" id="page-propietario">
+    <div class="page" id="page-propietario">
       <div class="sec-hdr">
         <div>
           <div class="sec-title">👤 Registro de Propietarios</div>
@@ -770,9 +937,11 @@ try { if(Object.keys(localStorage).some(k=>k.startsWith('sb-')&&k.includes('auth
       </div>
     </section>
 
-  </div>
-  </div>
-</div>
+    </div><!-- /page-estadisticas -->
+    </div><!-- /main-content -->
+  </div><!-- /app-main -->
+  </div><!-- /app-shell -->
+</div><!-- /app -->
 
 <!-- ═══ MODALS ═══ -->
 
@@ -1015,6 +1184,9 @@ try { if(Object.keys(localStorage).some(k=>k.startsWith('sb-')&&k.includes('auth
 <script src="/js/estadisticas-core.js"></script>
 <script src="/js/estadisticas-tab.js"></script>
 <script src="/js/informes.js"></script>
+<!-- dashboard.js va después de los módulos que usa (helpers, db, modals, nav,
+     propietarios, historia) y antes de app.js, que es quien dispara boot(). -->
+<script src="/js/dashboard.js"></script>
 <script src="/js/app.js"></script>
 
 </body>
