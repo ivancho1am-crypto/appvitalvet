@@ -13,11 +13,16 @@ function go(page, btn) {
   if (page === 'estadisticas') abrirEstadisticas();
   // Inicio: recalcular al entrar, igual que Informes/Estadísticas.
   if (page === 'inicio' && typeof rDashboard === 'function') rDashboard();
+  // Agenda: igual que Informes/Estadísticas, se recalcula al entrar.
+  if (page === 'agenda' && typeof rAgenda === 'function') rAgenda();
 }
 
 function boot() {
   updSelects(); rProp(); rMas(); rHistList(); rSeg(); rRecordatorios(); rCotizacion(); rInfProp(); rInfMas(); rStats();
   if (typeof rDashboard === 'function') rDashboard();
+  // Solo el contador del sidebar (citas de hoy), no la lista completa: la
+  // lista se calcula recién cuando se entra a la pestaña (arriba en go()).
+  if (typeof _actualizarBadge === 'function') _actualizarBadge();
 }
 
 function rStats() {

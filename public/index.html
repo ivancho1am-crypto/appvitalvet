@@ -8,6 +8,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/css/styles.css">
 <link rel="stylesheet" href="/css/estadisticas.css">
+<link rel="stylesheet" href="/css/agenda.css">
 <style>
 /* ── Portada estilo videojuego (splash de entrada) ──────────────────
    .av-splash-imgbox mantiene SIEMPRE la proporción real de la imagen
@@ -150,6 +151,9 @@ try { if(Object.keys(localStorage).some(k=>k.startsWith('sb-')&&k.includes('auth
       <button class="tab-btn sidebar-item" data-module-status="existing" onclick="go('mascota',this)">
         <span class="si-ico">🐾</span><span>Mascotas</span>
       </button>
+      <button class="tab-btn sidebar-item" data-module-status="existing" onclick="go('agenda',this)">
+        <span class="si-ico">📅</span><span>Agenda</span><span class="si-badge" id="ag-n">0</span>
+      </button>
       <button class="tab-btn sidebar-item" data-module-status="existing" onclick="go('historia',this)">
         <span class="si-ico">📋</span><span>Historias Clínicas</span>
       </button>
@@ -174,7 +178,6 @@ try { if(Object.keys(localStorage).some(k=>k.startsWith('sb-')&&k.includes('auth
       <div class="sidebar-section">Próximamente</div>
       <!-- Solo interfaz: sin onclick, sin rutas, sin funciones. Ninguno de estos
            módulos existe todavía — por eso no llaman a go() ni a nada. -->
-      <button class="sidebar-item module-coming-soon" data-module-status="new" disabled><span class="si-ico">📅</span><span>Agenda</span><span class="si-soon">Pronto</span></button>
       <button class="sidebar-item module-coming-soon" data-module-status="new" disabled><span class="si-ico">🛏️</span><span>Hospitalización avanzada</span><span class="si-soon">Pronto</span></button>
       <button class="sidebar-item module-coming-soon" data-module-status="new" disabled><span class="si-ico">🔪</span><span>Cirugía</span><span class="si-soon">Pronto</span></button>
       <button class="sidebar-item module-coming-soon" data-module-status="new" disabled><span class="si-ico">🧪</span><span>Laboratorio</span><span class="si-soon">Pronto</span></button>
@@ -395,6 +398,27 @@ try { if(Object.keys(localStorage).some(k=>k.startsWith('sb-')&&k.includes('auth
           </table>
         </div>
       </div>
+    </div>
+
+    <!-- ══ AGENDA ══ -->
+    <div class="page vv-agenda" id="page-agenda">
+      <div class="sec-hdr">
+        <div><div class="sec-title">📅 Agenda de citas</div></div>
+        <button class="btn btn-green" onclick="agAbrirNuevaCita()">+ Nueva cita</button>
+      </div>
+      <div class="ag-toolbar">
+        <div class="ftabs">
+          <button class="ftab on" onclick="agVerLista(this)">Lista (14 días)</button>
+          <button class="ftab" onclick="agVerDia(this)">Día</button>
+        </div>
+        <div class="ag-nav-dia">
+          <button class="btn btn-outline btn-sm" onclick="agDiaAnterior()">←</button>
+          <button class="btn btn-outline btn-sm" onclick="agHoy()">Hoy</button>
+          <button class="btn btn-outline btn-sm" onclick="agDiaSiguiente()">→</button>
+          <span class="ag-fecha-actual" id="ag-fecha-actual">Próximos 14 días</span>
+        </div>
+      </div>
+      <div id="ag-lista"></div>
     </div>
 
     <!-- ══ HISTORIA CLINICA ══ -->
@@ -1091,6 +1115,39 @@ try { if(Object.keys(localStorage).some(k=>k.startsWith('sb-')&&k.includes('auth
   </div>
 </div>
 
+<!-- NUEVA CITA (Agenda) -->
+<div class="mo vv-agenda" id="m-cita">
+  <div class="md">
+    <div class="mh"><div class="mt">📅 Nueva cita</div><button class="mx" onclick="closeM('m-cita')">✕</button></div>
+    <div class="mb">
+      <div class="fg">
+        <div class="fi ff"><label>Mascota *</label><select id="ag-mas" onchange="agMascotaSeleccionada()"></select></div>
+        <div class="fi ff" id="ag-info-mascota"></div>
+        <div class="fi"><label>Servicio *</label>
+          <select id="ag-servicio">
+            <option value="">Selecciona</option>
+            <option value="consulta">Consulta general</option>
+            <option value="vacunacion">Vacunación</option>
+            <option value="desparasitacion">Desparasitación</option>
+            <option value="cirugia">Cirugía</option>
+            <option value="laboratorio">Laboratorio</option>
+            <option value="imagen">Imagen diagnóstica</option>
+            <option value="hospitalizacion">Hospitalización</option>
+            <option value="peluqueria">Peluquería</option>
+            <option value="otro">Otro</option>
+          </select></div>
+        <div class="fi"><label>Duración (min)</label><input type="number" id="ag-duracion" value="30" min="5" step="5"></div>
+        <div class="fi ff"><label>Fecha y hora *</label><input type="datetime-local" id="ag-fecha"></div>
+        <div class="fi ff"><label>Motivo / notas</label><textarea id="ag-motivo" placeholder="Motivo de la cita..." style="min-height:55px"></textarea></div>
+      </div>
+    </div>
+    <div class="mf">
+      <button class="btn btn-outline" onclick="closeM('m-cita')">Cancelar</button>
+      <button class="btn btn-green" id="ag-save-btn" onclick="agGuardarCita()">💾 Guardar cita</button>
+    </div>
+  </div>
+</div>
+
 <!-- PROCEDIMIENTO -->
 <div class="mo" id="m-proc">
   <div class="md">
@@ -1187,6 +1244,11 @@ try { if(Object.keys(localStorage).some(k=>k.startsWith('sb-')&&k.includes('auth
 <!-- dashboard.js va después de los módulos que usa (helpers, db, modals, nav,
      propietarios, historia) y antes de app.js, que es quien dispara boot(). -->
 <script src="/js/dashboard.js"></script>
+<!-- agenda/* va después de los mismos módulos base (helpers, db, modals, nav,
+     historia) por la misma razón que dashboard.js, y antes de app.js. -->
+<script src="/js/agenda/agenda-repository.js"></script>
+<script src="/js/agenda/agenda-service.js"></script>
+<script src="/js/agenda/agenda-ui.js"></script>
 <script src="/js/app.js"></script>
 
 </body>

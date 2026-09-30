@@ -1,0 +1,41 @@
+/* Agenda v1 — todo acotado a .vv-agenda, mismo motivo que estadisticas.css:
+   no reemplaza ninguna variable ni clase existente, solo agrega las suyas. */
+
+.vv-agenda .ag-toolbar{
+  display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap;
+}
+.vv-agenda .ag-nav-dia{display:flex;align-items:center;gap:8px}
+.vv-agenda .ag-fecha-actual{font-size:13px;font-weight:700;color:var(--navy);min-width:200px}
+
+.vv-agenda .ag-day-group{margin-bottom:18px}
+.vv-agenda .ag-day-hdr{
+  font-size:11px;font-weight:700;color:var(--green-dk);text-transform:uppercase;
+  letter-spacing:.6px;padding:6px 0;border-bottom:2px solid var(--green-lt);margin-bottom:8px;
+}
+
+.vv-agenda .ag-card{
+  display:flex;gap:14px;align-items:flex-start;background:#fff;border:1px solid var(--g200);
+  border-radius:var(--r-sm);padding:12px 14px;margin-bottom:8px;
+}
+.vv-agenda .ag-card-hora{
+  font-family:'DM Mono',monospace;font-size:14px;font-weight:700;color:var(--navy);
+  min-width:56px;display:flex;flex-direction:column;
+}
+.vv-agenda .ag-card-dur{font-size:10px;font-weight:500;color:var(--g500)}
+.vv-agenda .ag-card-body{flex:1;min-width:0}
+.vv-agenda .ag-card-top{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.vv-agenda .ag-card-mascota{font-size:13px;font-weight:700;color:var(--navy)}
+.vv-agenda .ag-card-sub{font-size:11.5px;color:var(--g500);margin-top:2px}
+.vv-agenda .ag-card-notas{font-size:11.5px;color:var(--g700);margin-top:4px;font-style:italic}
+.vv-agenda .ag-card-acciones{display:flex;flex-direction:column;gap:5px;flex-shrink:0}
+
+.vv-agenda .ag-mascota-info{
+  background:var(--green-xlt);border:1px solid var(--green-lt);border-radius:var(--r-sm);
+  padding:10px 12px;font-size:12px;color:var(--navy);margin-top:6px;
+}
+.vv-agenda .ag-mascota-info-row{font-size:11px;color:var(--g700);margin-top:3px}
+
+@media(max-width:768px){
+  .vv-agenda .ag-card{flex-direction:column}
+  .vv-agenda .ag-card-acciones{flex-direction:row;flex-wrap:wrap}
+}
