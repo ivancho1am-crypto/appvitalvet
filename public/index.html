@@ -1421,8 +1421,10 @@ try { if(Object.keys(localStorage).some(k=>k.startsWith('sb-')&&k.includes('auth
 <script src="/js/inventario/inventario-repository.js"></script>
 <script src="/js/inventario/inventario-service.js"></script>
 <script src="/js/inventario/inventario-ui.js"></script>
-<!-- finanzas/* va después de cotizacion.js (lee `facturas`, que crea ese
-     módulo) y de los mismos módulos base que agenda/* e inventario/*. -->
+<!-- finanzas/* va después de los mismos módulos base que agenda/* e
+     inventario/*, y antes de app.js. (Lee la tabla `facturas` directo por
+     Supabase en tiempo de ejecución — no depende del orden de carga de
+     cotizacion.js, que es quien la crea.) -->
 <script src="/js/finanzas/finanzas-repository.js"></script>
 <script src="/js/finanzas/finanzas-service.js"></script>
 <script src="/js/finanzas/finanzas-ui.js"></script>
