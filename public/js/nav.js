@@ -17,6 +17,11 @@ function go(page, btn) {
   if (page === 'agenda' && typeof rAgenda === 'function') rAgenda();
   // Inventario: igual que Agenda, se recalcula al entrar.
   if (page === 'inventario' && typeof rInventario === 'function') rInventario();
+  // Finanzas: igual que Agenda/Inventario, se recalcula al entrar. Sin badge
+  // en el sidebar (a diferencia de Agenda/Inventario): un balance no reduce
+  // bien a un contador chico, y mostrar solo un número sin signo/contexto
+  // confundiría más de lo que ayuda.
+  if (page === 'finanzas' && typeof rFinanzas === 'function') rFinanzas();
 }
 
 function boot() {

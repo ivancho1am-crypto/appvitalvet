@@ -177,6 +177,9 @@ try { if(Object.keys(localStorage).some(k=>k.startsWith('sb-')&&k.includes('auth
       <button class="tab-btn sidebar-item" data-module-status="existing" onclick="go('inventario',this)">
         <span class="si-ico">📦</span><span>Inventario</span><span class="si-badge" id="inv-n">0</span>
       </button>
+      <button class="tab-btn sidebar-item" data-module-status="existing" onclick="go('finanzas',this)">
+        <span class="si-ico">💰</span><span>Finanzas</span>
+      </button>
 
       <div class="sidebar-section">Próximamente</div>
       <!-- Solo interfaz: sin onclick, sin rutas, sin funciones. Ninguno de estos
@@ -185,7 +188,6 @@ try { if(Object.keys(localStorage).some(k=>k.startsWith('sb-')&&k.includes('auth
       <button class="sidebar-item module-coming-soon" data-module-status="new" disabled><span class="si-ico">🔪</span><span>Cirugía</span><span class="si-soon">Pronto</span></button>
       <button class="sidebar-item module-coming-soon" data-module-status="new" disabled><span class="si-ico">🧪</span><span>Laboratorio</span><span class="si-soon">Pronto</span></button>
       <button class="sidebar-item module-coming-soon" data-module-status="new" disabled><span class="si-ico">📡</span><span>Imagenología</span><span class="si-soon">Pronto</span></button>
-      <button class="sidebar-item module-coming-soon" data-module-status="new" disabled><span class="si-ico">💰</span><span>Finanzas</span><span class="si-soon">Pronto</span></button>
       <button class="sidebar-item module-coming-soon" data-module-status="new" disabled><span class="si-ico">📣</span><span>Marketing</span><span class="si-soon">Pronto</span></button>
       <button class="sidebar-item module-coming-soon" data-module-status="new" disabled><span class="si-ico">⚙️</span><span>Automatizaciones</span><span class="si-soon">Pronto</span></button>
       <button class="sidebar-item module-coming-soon" data-module-status="new" disabled><span class="si-ico">🤖</span><span>IA</span><span class="si-soon">Pronto</span></button>
@@ -993,6 +995,43 @@ try { if(Object.keys(localStorage).some(k=>k.startsWith('sb-')&&k.includes('auth
         <div id="inv-tabla"></div>
       </div>
     </div>
+
+    <!-- ══ FINANZAS ══ -->
+    <div class="page" id="page-finanzas">
+      <div class="sec-hdr">
+        <div><div class="sec-title">💰 Finanzas</div></div>
+        <button class="btn btn-green" onclick="finAbrirNuevoGasto()">+ Nuevo gasto</button>
+      </div>
+
+      <div class="ftabs" style="margin-bottom:14px">
+        <button class="ftab" onclick="fFinRango('dia',this)">Hoy</button>
+        <button class="ftab" onclick="fFinRango('semana',this)">Últimos 7 días</button>
+        <button class="ftab on" onclick="fFinRango('mes',this)">Este mes</button>
+      </div>
+      <div style="font-size:11px;color:var(--g500);margin-bottom:10px" id="fin-rango-actual"></div>
+
+      <div class="kpi-row">
+        <div class="kpi-card" style="--c:var(--green)">
+          <div class="kc-ic">📈</div><div class="kc-val" id="fin-kpi-ingresos">$ 0</div><div class="kc-lbl">Ingresos (facturado)</div>
+        </div>
+        <div class="kpi-card" style="--c:#dc2626">
+          <div class="kc-ic">📉</div><div class="kc-val" id="fin-kpi-gastos">$ 0</div><div class="kc-lbl">Gastos</div>
+        </div>
+        <div class="kpi-card" id="fin-kpi-balance-card" style="--c:var(--brand)">
+          <div class="kc-ic">⚖️</div><div class="kc-val" id="fin-kpi-balance">$ 0</div><div class="kc-lbl">Balance</div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:16px">
+        <div class="card-hdr"><div class="card-title">🧾 Facturas emitidas</div></div>
+        <div class="card-body" id="fin-facturas-tabla"></div>
+      </div>
+
+      <div class="card" style="margin-top:16px">
+        <div class="card-hdr"><div class="card-title">💸 Gastos</div></div>
+        <div id="fin-gastos-tabla"></div>
+      </div>
+    </div>
     </div><!-- /main-content -->
   </div><!-- /app-main -->
   </div><!-- /app-shell -->
@@ -1247,6 +1286,35 @@ try { if(Object.keys(localStorage).some(k=>k.startsWith('sb-')&&k.includes('auth
   </div>
 </div>
 
+<!-- NUEVO/EDITAR GASTO (Finanzas) -->
+<div class="mo" id="m-fin-gasto">
+  <div class="md">
+    <div class="mh"><div class="mt" id="m-fin-gasto-titulo">💸 Nuevo gasto</div><button class="mx" onclick="closeM('m-fin-gasto')">✕</button></div>
+    <div class="mb">
+      <input type="hidden" id="fin-gasto-id">
+      <div class="fg">
+        <div class="fi"><label>Categoría *</label>
+          <select id="fin-g-cat">
+            <option value="insumos">Insumos / medicamentos</option>
+            <option value="arriendo">Arriendo</option>
+            <option value="servicios_publicos">Servicios públicos</option>
+            <option value="nomina">Nómina</option>
+            <option value="impuestos">Impuestos</option>
+            <option value="mantenimiento">Mantenimiento / equipos</option>
+            <option value="otro">Otro</option>
+          </select></div>
+        <div class="fi"><label>Monto *</label><input type="number" id="fin-g-monto" placeholder="0" min="0"></div>
+        <div class="fi"><label>Fecha *</label><input type="date" id="fin-g-fecha"></div>
+        <div class="fi ff"><label>Descripción</label><input type="text" id="fin-g-desc" placeholder="Opcional"></div>
+      </div>
+    </div>
+    <div class="mf">
+      <button class="btn btn-outline" onclick="closeM('m-fin-gasto')">Cancelar</button>
+      <button class="btn btn-green" id="fin-g-save-btn" onclick="finGuardarGasto()">💾 Guardar</button>
+    </div>
+  </div>
+</div>
+
 <!-- PROCEDIMIENTO -->
 <div class="mo" id="m-proc">
   <div class="md">
@@ -1353,6 +1421,11 @@ try { if(Object.keys(localStorage).some(k=>k.startsWith('sb-')&&k.includes('auth
 <script src="/js/inventario/inventario-repository.js"></script>
 <script src="/js/inventario/inventario-service.js"></script>
 <script src="/js/inventario/inventario-ui.js"></script>
+<!-- finanzas/* va después de cotizacion.js (lee `facturas`, que crea ese
+     módulo) y de los mismos módulos base que agenda/* e inventario/*. -->
+<script src="/js/finanzas/finanzas-repository.js"></script>
+<script src="/js/finanzas/finanzas-service.js"></script>
+<script src="/js/finanzas/finanzas-ui.js"></script>
 <script src="/js/app.js"></script>
 
 </body>
