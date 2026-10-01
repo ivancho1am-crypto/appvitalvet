@@ -1026,32 +1026,25 @@ try { if(Object.keys(localStorage).some(k=>k.startsWith('sb-')&&k.includes('auth
 
       <!-- 4 indicadores separados a propósito: facturar no es lo mismo que
            cobrar. "Facturado" nunca se muestra como "Ingresos". -->
+      <!-- "Ingresos" = Cobrado (facturas) + Ventas directas, sumados para
+           mostrar en el dashboard (decisión de Iván, 2026-10-02: en base de
+           datos siguen siendo operaciones distintas — facturas/pagos por un
+           lado, ventas por otro; acá solo se suman para la vista). El
+           desglose queda chico debajo del número, para no perder de dónde
+           sale cada parte. -->
       <div class="kpi-row">
         <div class="kpi-card" style="--c:var(--blue)">
           <div class="kc-ic">🧾</div><div class="kc-val" id="fin-kpi-facturado">$ 0</div><div class="kc-lbl">Facturado</div>
         </div>
         <div class="kpi-card" style="--c:var(--green)">
-          <div class="kc-ic">💵</div><div class="kc-val" id="fin-kpi-cobrado">$ 0</div><div class="kc-lbl">Cobrado</div>
+          <div class="kc-ic">💵</div><div class="kc-val" id="fin-kpi-ingresos">$ 0</div><div class="kc-lbl">Ingresos (Facturas + Ventas)</div>
+          <div style="font-size:10px;color:var(--g500);margin-top:2px" id="fin-kpi-ingresos-desglose"></div>
         </div>
         <div class="kpi-card" style="--c:#d97706">
           <div class="kc-ic">⏳</div><div class="kc-val" id="fin-kpi-porcobrar">$ 0</div><div class="kc-lbl">Por cobrar</div>
         </div>
         <div class="kpi-card" style="--c:#dc2626">
           <div class="kc-ic">📉</div><div class="kc-val" id="fin-kpi-gastos">$ 0</div><div class="kc-lbl">Gastos</div>
-        </div>
-      </div>
-
-      <!-- Ventas directas: aparte de los 4 de arriba a propósito. "Cobrado"
-           sigue siendo exactamente lo que dice finanzas_resumen_* (pagos de
-           facturas); una venta de mostrador se registra ya cobrada pero por
-           fuera de ese circuito (decisión de Iván, 2026-10-02) — por eso se
-           muestra como su propio número, con el combinado abajo. -->
-      <div class="kpi-row" style="grid-template-columns:repeat(2,1fr);margin-top:10px">
-        <div class="kpi-card" style="--c:var(--brand)">
-          <div class="kc-ic">🛒</div><div class="kc-val" id="fin-kpi-ventas">$ 0</div><div class="kc-lbl">Ventas directas (mostrador/servicios)</div>
-        </div>
-        <div class="kpi-card kpi-finance" style="--c:var(--green)">
-          <div class="kc-ic">💰</div><div class="kc-val" id="fin-total-cobrado-real">$ 0</div><div class="kc-lbl">Total cobrado real (Facturas + Ventas)</div>
         </div>
       </div>
 

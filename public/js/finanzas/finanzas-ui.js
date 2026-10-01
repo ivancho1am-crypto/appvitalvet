@@ -4,11 +4,16 @@
 // con Supabase directo. Mismo patrón que agenda-ui.js / inventario-ui.js.
 //
 // Ciclo 3 (v1.2): deja de interpretar `facturas.total` como dinero cobrado.
-// Ahora muestra FACTURADO / COBRADO / POR COBRAR / GASTOS, leídos de
+// Muestra FACTURADO / INGRESOS / POR COBRAR / GASTOS, leídos de
 // finanzas_resumen_facturas y finanzas_resumen_mensual — nunca calculados
-// a mano sobre facturas.total. Todavía NO se registra ningún pago desde
-// acá (eso es el siguiente ciclo) — esta pantalla es de solo lectura para
-// lo financiero, salvo Gastos, que ya existía.
+// a mano sobre facturas.total. Esta pantalla es de solo lectura para lo
+// financiero, salvo Gastos y Pagos, que sí escriben.
+//
+// "Ingresos" (2026-10-02, decisión de Iván) = Cobrado (facturas, vía
+// pagos) + Ventas directas (mostrador/servicios, que se registran ya
+// cobradas) — sumados SOLO para esta vista. En Supabase siguen siendo
+// operaciones y tablas distintas; acá nunca se guarda el combinado, se
+// calcula cada vez que se entra a la pestaña.
 
 let FIN_VISTA = 'mes';          // 'dia' | 'semana' | 'mes'
 let FIN_CACHE_GASTOS = [];      // último listarGastos() — para prellenar el modal de editar
@@ -78,14 +83,16 @@ function _finSoloFecha(d) {
 function _finRenderResumen(r) {
   const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = fmt$(val) };
   setVal('fin-kpi-facturado', r.facturado);
-  setVal('fin-kpi-cobrado', r.cobrado);
+  // "Ingresos" en el dashboard = Cobrado (facturas) + Ventas directas,
+  // sumados para la vista — en Supabase siguen siendo tablas y operaciones
+  // distintas (facturas/pagos vs. ventas), esto nunca se guarda en ningún
+  // lado, se calcula acá cada vez. El desglose chico de abajo deja ver de
+  // dónde sale cada parte, para no esconder el origen de cada número.
+  setVal('fin-kpi-ingresos', r.cobrado + r.ventasDirectas);
+  const desglose = document.getElementById('fin-kpi-ingresos-desglose');
+  if (desglose) desglose.textContent = `Facturas: ${fmt$(r.cobrado)} · Ventas: ${fmt$(r.ventasDirectas)}`;
   setVal('fin-kpi-porcobrar', r.porCobrar);
   setVal('fin-kpi-gastos', r.gastos);
-  // Ventas directas: aparte de los 4 de arriba a propósito — "cobrado" tiene
-  // que seguir coincidiendo exacto con finanzas_resumen_*. El combinado de
-  // abajo es solo una suma visual, no un número que se guarde en ningún lado.
-  setVal('fin-kpi-ventas', r.ventasDirectas);
-  setVal('fin-total-cobrado-real', r.cobrado + r.ventasDirectas);
 }
 
 // `resumenFacturas` trae cobrado/saldo_pendiente por factura_id — se cruza
