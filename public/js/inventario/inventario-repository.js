@@ -87,5 +87,61 @@ const InventarioRepo = {
     const { data, error } = await sb.from('lotes').update(cambios).eq('id', id).select().single();
     if (error) throw error;
     return data;
+  },
+
+  // ── Kardex + vencimientos + últimos movimientos (Ciclo 3) ──────────────
+  // Lotes activos con stock > 0 y vencimiento dentro del horizonte — 2
+  // consultas en vez de un embedding de PostgREST (mismo criterio que
+  // VentasRepo.listarVentas: más fácil de depurar, el volumen no justifica
+  // optimizar). `inventario_stock_por_lote` no trae el nombre del producto,
+  // por eso se cruza acá con `productos`.
+  async listarVencimientosProximos(diasHorizonte = 90) {
+    const sb = getSB(); if (!sb) return [];
+    const limite = new Date(); limite.setDate(limite.getDate() + diasHorizonte);
+    const limiteISO = `${limite.getFullYear()}-${String(limite.getMonth() + 1).padStart(2, '0')}-${String(limite.getDate()).padStart(2, '0')}`;
+    const { data: lotes, error } = await sb.from('inventario_stock_por_lote').select('*')
+      .gt('stock_actual', 0).not('fecha_vencimiento', 'is', null)
+      .lte('fecha_vencimiento', limiteISO).order('fecha_vencimiento', { ascending: true });
+    if (error) { console.warn('[inventario] listarVencimientosProximos:', error.message); return []; }
+    if (!lotes || !lotes.length) return [];
+
+    const idsProductos = [...new Set(lotes.map(l => l.producto_id))];
+    const { data: productos, error: errProd } = await sb.from('productos').select('id, nombre, unidad').in('id', idsProductos);
+    if (errProd) { console.warn('[inventario] listarVencimientosProximos (productos):', errProd.message); return lotes; }
+    const porId = {}; (productos || []).forEach(p => { porId[p.id] = p });
+    return lotes.map(l => ({ ...l, producto_nombre: (porId[l.producto_id] || {}).nombre || '—', unidad: (porId[l.producto_id] || {}).unidad || '' }));
+  },
+
+  // Movimientos de un producto, orden ASCENDENTE (para calcular saldo
+  // corrido) con el número de lote asociado si lo tiene — misma estrategia
+  // de 2 consultas + merge en JS.
+  async kardexDeProducto(productoId) {
+    const sb = getSB(); if (!sb || !productoId) return [];
+    const { data: movs, error } = await sb.from('inventario_movimientos').select('*')
+      .eq('producto_id', productoId).order('created_at', { ascending: true });
+    if (error) { console.warn('[inventario] kardexDeProducto:', error.message); return []; }
+    if (!movs || !movs.length) return [];
+
+    const idsLotes = [...new Set(movs.map(m => m.lote_id).filter(Boolean))];
+    if (!idsLotes.length) return movs;
+    const { data: lotes, error: errLotes } = await sb.from('lotes').select('id, numero_lote').in('id', idsLotes);
+    if (errLotes) { console.warn('[inventario] kardexDeProducto (lotes):', errLotes.message); return movs; }
+    const porId = {}; (lotes || []).forEach(l => { porId[l.id] = l.numero_lote });
+    return movs.map(m => ({ ...m, numero_lote: m.lote_id ? (porId[m.lote_id] || null) : null }));
+  },
+
+  // Globales, de cualquier producto — para el widget "Últimos movimientos".
+  async listarUltimosMovimientos(limite = 10) {
+    const sb = getSB(); if (!sb) return [];
+    const { data: movs, error } = await sb.from('inventario_movimientos').select('*')
+      .order('created_at', { ascending: false }).limit(limite);
+    if (error) { console.warn('[inventario] listarUltimosMovimientos:', error.message); return []; }
+    if (!movs || !movs.length) return [];
+
+    const idsProductos = [...new Set(movs.map(m => m.producto_id))];
+    const { data: productos, error: errProd } = await sb.from('productos').select('id, nombre').in('id', idsProductos);
+    if (errProd) { console.warn('[inventario] listarUltimosMovimientos (productos):', errProd.message); return movs; }
+    const porId = {}; (productos || []).forEach(p => { porId[p.id] = p.nombre });
+    return movs.map(m => ({ ...m, producto_nombre: porId[m.producto_id] || '—' }));
   }
 };

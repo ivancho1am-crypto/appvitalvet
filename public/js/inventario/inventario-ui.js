@@ -34,6 +34,50 @@ async function rInventario() {
   _invRenderAlerta();
   _invRenderTabla();
   _invActualizarBadge(stock);
+  _invRenderValorInventario();
+  _invRenderVencimientos();     // widget propio, independiente del catálogo
+  _invRenderUltimosMovimientos();
+}
+
+function _invRenderValorInventario() {
+  const el = document.getElementById('inv-kpi-valor'); const nota = document.getElementById('inv-kpi-valor-nota');
+  if (!el) return;
+  const { total, conFallback } = invCalcularValorInventario(INV_CACHE_FILAS);
+  el.textContent = fmt$(total);
+  if (nota) nota.textContent = conFallback > 0 ? `${conFallback} producto(s) sin costo, usando precio de venta` : 'Basado en costo de adquisición';
+}
+
+// Vencimientos: widget independiente (su propia consulta a Supabase), para
+// no esperar a que termine de cargar el catálogo completo si tarda.
+async function _invRenderVencimientos() {
+  const el = document.getElementById('inv-vencimientos'); if (!el) return;
+  el.innerHTML = '<p style="color:var(--g500);font-size:12px">Cargando…</p>';
+  let lotes;
+  try { lotes = await InventarioRepo.listarVencimientosProximos(90); }
+  catch (e) { el.innerHTML = '<p style="color:var(--g500);font-size:12px">No se pudo cargar</p>'; console.warn(e); return; }
+  if (!lotes.length) { el.innerHTML = '<p style="color:var(--g500);font-size:12px">Sin vencimientos próximos ✓</p>'; return; }
+  el.innerHTML = lotes.map(l => {
+    const clase = invClasificarVencimiento(l.fecha_vencimiento);
+    const info = INV_VENC_INFO[clase] || { icon: '', label: '', badge: 'bg-gray' };
+    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--g200)">
+      <span>${info.icon} ${l.producto_nombre} <span style="color:var(--g500)">(Lote ${l.numero_lote})</span></span>
+      <span class="badge ${info.badge}">${l.stock_actual} ${l.unidad} — vence ${l.fecha_vencimiento}</span>
+    </div>`;
+  }).join('');
+}
+
+async function _invRenderUltimosMovimientos() {
+  const el = document.getElementById('inv-ultimos-mov'); if (!el) return;
+  el.innerHTML = '<p style="color:var(--g500);font-size:12px">Cargando…</p>';
+  let movs;
+  try { movs = await InventarioRepo.listarUltimosMovimientos(10); }
+  catch (e) { el.innerHTML = '<p style="color:var(--g500);font-size:12px">No se pudo cargar</p>'; console.warn(e); return; }
+  if (!movs.length) { el.innerHTML = '<p style="color:var(--g500);font-size:12px">Sin movimientos todavía</p>'; return; }
+  el.innerHTML = movs.map(m => `
+    <div style="display:flex;justify-content:space-between;font-size:11.5px;padding:4px 0;border-bottom:1px solid var(--g200)">
+      <span>${m.producto_nombre} — ${INV_MOTIVOS[m.motivo] || m.motivo}</span>
+      <span class="badge ${m.cantidad > 0 ? 'bg-green' : 'bg-red'}">${m.cantidad > 0 ? '+' : ''}${m.cantidad}</span>
+    </div>`).join('');
 }
 
 function _invRenderAlerta() {
@@ -256,25 +300,39 @@ async function invGuardarMovimiento() {
   }
 }
 
-// ── Modal "Historial" (solo lectura) ───────────────────────────────────────
+// ── Modal "Kardex" (solo lectura) — antes "Historial", mismo botón/modal ───
+// Evolucionado de una lista simple a un Kardex real (Ciclo 3): saldo
+// corrido, lote, documento de origen. kardexDeProducto() ya viene ordenado
+// ascendente (lo necesita invCalcularKardex para el saldo); se muestra
+// descendente (más reciente primero), igual que el historial de antes.
 async function invVerHistorial(productoId) {
   const p = INV_CACHE_PRODUCTOS.find(x => x.id === productoId);
-  document.getElementById('m-inv-hist-titulo').textContent = `🕓 Historial — ${p ? p.nombre : ''}`;
+  document.getElementById('m-inv-hist-titulo').textContent = `🕓 Kardex — ${p ? p.nombre : ''}`;
   const cont = document.getElementById('inv-hist-lista');
   cont.innerHTML = '<div class="empty-s">Cargando…</div>';
   openM('m-inv-hist');
   let mov;
-  try { mov = await InventarioRepo.historialProducto(productoId); }
-  catch (e) { cont.innerHTML = '<div class="empty-s">No se pudo cargar el historial</div>'; console.warn(e); return; }
+  try { mov = await InventarioRepo.kardexDeProducto(productoId); }
+  catch (e) { cont.innerHTML = '<div class="empty-s">No se pudo cargar el Kardex</div>'; console.warn(e); return; }
   if (!mov.length) { cont.innerHTML = '<div class="empty-s">Sin movimientos todavía</div>'; return; }
-  cont.innerHTML = mov.map(m => `
-    <div style="display:flex;justify-content:space-between;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--g200)">
-      <div>
-        <div style="font-size:12px">${INV_MOTIVOS[m.motivo] || m.motivo}${m.nota ? ' — ' + m.nota : ''}</div>
-        <div style="font-size:11px;color:var(--g500)">${new Date(m.created_at).toLocaleString('es-CO')}</div>
-      </div>
-      <span class="badge ${m.cantidad > 0 ? 'bg-green' : 'bg-red'}">${m.cantidad > 0 ? '+' : ''}${m.cantidad}</span>
-    </div>`).join('');
+  // Orden ascendente (más viejo primero) — mismo formato que el ejemplo del
+  // Kardex: el saldo se lee bajando por la página, no al revés.
+  const filas = invCalcularKardex(mov);
+  cont.innerHTML = `<div class="tw"><table>
+    <thead><tr><th>Fecha</th><th>Lote</th><th>Motivo</th><th>Documento</th><th>Entrada</th><th>Salida</th><th>Saldo</th><th>Usuario</th><th>Observación</th></tr></thead>
+    <tbody>${filas.map(m => `
+      <tr>
+        <td style="white-space:nowrap">${new Date(m.created_at).toLocaleDateString('es-CO')}</td>
+        <td>${m.numero_lote || '—'}</td>
+        <td>${INV_MOTIVOS[m.motivo] || m.motivo}</td>
+        <td>${m.documento}</td>
+        <td>${m.entrada != null ? `<span class="badge bg-green">+${m.entrada}</span>` : ''}</td>
+        <td>${m.salida != null ? `<span class="badge bg-red">−${m.salida}</span>` : ''}</td>
+        <td><strong>${m.saldo}</strong></td>
+        <td style="font-size:11px;color:var(--g500)">${m.creado_por || '—'}</td>
+        <td style="font-size:11px;color:var(--g500)">${m.nota || ''}</td>
+      </tr>`).join('')}</tbody>
+  </table></div>`;
 }
 
 // ── Modal "Nuevo lote" (Ciclo 2) ────────────────────────────────────────────
@@ -328,5 +386,60 @@ async function invGuardarLote() {
     toast('No se pudo crear el lote', 'err'); console.warn(e);
   } finally {
     if (btn) { btn.disabled = false; btn.textContent = '💾 Guardar lote' }
+  }
+}
+
+// ── Conteo físico (Ciclo 3) ──────────────────────────────────────────────
+// Nunca toca stock directo — ya es imposible (no existe esa columna): al
+// confirmar, se arma un movimiento de ajuste como cualquier otro.
+function invAbrirConteo() {
+  const sel = document.getElementById('inv-c-prod');
+  sel.innerHTML = '<option value="">Selecciona producto</option>' +
+    INV_CACHE_FILAS.map(p => `<option value="${p.id}" data-stock="${p.stock_actual}">${invCategoriaInfo(p.categoria).icon} ${p.nombre}</option>`).join('');
+  document.getElementById('inv-c-sistema').value = '';
+  document.getElementById('inv-c-fisico').value = '';
+  document.getElementById('inv-c-diferencia').value = '';
+  document.getElementById('inv-c-nota').value = '';
+  openM('m-inv-conteo');
+}
+
+function invConteoProductoCambiado() {
+  const sel = document.getElementById('inv-c-prod');
+  const opt = sel.options[sel.selectedIndex];
+  document.getElementById('inv-c-sistema').value = opt && opt.dataset.stock != null ? opt.dataset.stock : '';
+  document.getElementById('inv-c-fisico').value = '';
+  document.getElementById('inv-c-diferencia').value = '';
+}
+
+function invConteoCalcularDiferencia() {
+  const sistema = parseFloat(document.getElementById('inv-c-sistema').value) || 0;
+  const fisico = parseFloat(document.getElementById('inv-c-fisico').value);
+  const dif = document.getElementById('inv-c-diferencia');
+  if (isNaN(fisico)) { dif.value = ''; return; }
+  const d = Math.round((fisico - sistema) * 100) / 100;
+  dif.value = (d > 0 ? '+' : '') + d;
+}
+
+async function invConfirmarConteo() {
+  const { error, fila, diferencia } = invConstruirAjusteConteo({
+    productoId: document.getElementById('inv-c-prod').value,
+    stockSistema: document.getElementById('inv-c-sistema').value,
+    stockContado: document.getElementById('inv-c-fisico').value,
+    nota: document.getElementById('inv-c-nota').value,
+  });
+  if (error) { toast(error, 'err'); return; }
+  if (!confirm(`¿Confirmar ajuste de ${diferencia > 0 ? '+' : ''}${diferencia}? Esto crea un movimiento de ajuste, no modifica nada directo.`)) return;
+
+  const btn = document.getElementById('inv-c-save-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Guardando…' }
+  try {
+    await InventarioRepo.registrarMovimiento(fila);
+    toast('Ajuste registrado ✓', 'ok');
+    closeM('m-inv-conteo');
+    rInventario();
+  } catch (e) {
+    toast('No se pudo registrar el ajuste', 'err'); console.warn(e);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '✓ Confirmar ajuste' }
   }
 }

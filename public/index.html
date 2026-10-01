@@ -986,14 +986,35 @@ try { if(Object.keys(localStorage).some(k=>k.startsWith('sb-')&&k.includes('auth
       <div class="sec-hdr">
         <div><div class="sec-title">📦 Inventario</div></div>
         <div style="display:flex;gap:8px">
+          <button class="btn btn-outline" onclick="invAbrirConteo()">📋 Conteo físico</button>
           <button class="btn btn-outline" onclick="invAbrirMovimiento()">↕ Registrar movimiento</button>
           <button class="btn btn-green" onclick="invAbrirNuevoProducto()">+ Nuevo producto</button>
         </div>
       </div>
-      <div class="card" style="margin-bottom:16px">
-        <div class="card-hdr"><div class="card-title">⚠️ Bajo stock</div></div>
-        <div class="card-body" id="inv-alerta"></div>
+
+      <div class="kpi-row" style="grid-template-columns:repeat(1,1fr);margin-bottom:16px;max-width:260px">
+        <div class="kpi-card" style="--c:var(--brand)">
+          <div class="kc-ic">💰</div><div class="kc-val" id="inv-kpi-valor">$ 0</div><div class="kc-lbl">Valor del inventario</div>
+          <div style="font-size:10px;color:var(--g500);margin-top:2px" id="inv-kpi-valor-nota"></div>
+        </div>
       </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+        <div class="card">
+          <div class="card-hdr"><div class="card-title">⚠️ Bajo stock</div></div>
+          <div class="card-body" id="inv-alerta"></div>
+        </div>
+        <div class="card">
+          <div class="card-hdr"><div class="card-title">⏳ Próximos vencimientos</div></div>
+          <div class="card-body" id="inv-vencimientos"></div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-hdr"><div class="card-title">📋 Últimos movimientos</div></div>
+        <div class="card-body" id="inv-ultimos-mov"></div>
+      </div>
+
       <div class="card">
         <div class="card-hdr">
           <div class="card-title">📦 Catálogo</div>
@@ -1357,10 +1378,31 @@ try { if(Object.keys(localStorage).some(k=>k.startsWith('sb-')&&k.includes('auth
 
 <!-- HISTORIAL DE MOVIMIENTOS (Inventario, solo lectura) -->
 <div class="mo" id="m-inv-hist">
-  <div class="md">
-    <div class="mh"><div class="mt" id="m-inv-hist-titulo">🕓 Historial</div><button class="mx" onclick="closeM('m-inv-hist')">✕</button></div>
+  <div class="md" style="max-width:760px">
+    <div class="mh"><div class="mt" id="m-inv-hist-titulo">🕓 Kardex</div><button class="mx" onclick="closeM('m-inv-hist')">✕</button></div>
     <div class="mb"><div id="inv-hist-lista"></div></div>
     <div class="mf"><button class="btn btn-outline" onclick="closeM('m-inv-hist')">Cerrar</button></div>
+  </div>
+</div>
+
+<!-- CONTEO FÍSICO (Inventario — Ciclo 3) -->
+<div class="mo" id="m-inv-conteo">
+  <div class="md">
+    <div class="mh"><div class="mt">📋 Conteo físico</div><button class="mx" onclick="closeM('m-inv-conteo')">✕</button></div>
+    <div class="mb">
+      <div class="fg">
+        <div class="fi ff"><label>Producto *</label><select id="inv-c-prod" onchange="invConteoProductoCambiado()"></select></div>
+        <div class="fi"><label>Stock en el sistema</label><input type="text" id="inv-c-sistema" readonly disabled></div>
+        <div class="fi"><label>Conteo físico *</label><input type="number" id="inv-c-fisico" placeholder="0" min="0" step="any" oninput="invConteoCalcularDiferencia()"></div>
+        <div class="fi ff"><label>Diferencia</label><input type="text" id="inv-c-diferencia" readonly disabled></div>
+        <div class="fi ff"><label>Nota</label><textarea id="inv-c-nota" placeholder="Opcional" style="min-height:45px"></textarea></div>
+      </div>
+      <p style="font-size:11px;color:var(--g500);margin-top:6px">Al confirmar se registra un movimiento de ajuste — el stock nunca se modifica directo.</p>
+    </div>
+    <div class="mf">
+      <button class="btn btn-outline" onclick="closeM('m-inv-conteo')">Cancelar</button>
+      <button class="btn btn-green" id="inv-c-save-btn" onclick="invConfirmarConteo()">✓ Confirmar ajuste</button>
+    </div>
   </div>
 </div>
 

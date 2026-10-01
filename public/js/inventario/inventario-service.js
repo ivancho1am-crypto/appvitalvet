@@ -122,3 +122,80 @@ function invConstruirLote({ productoId, numeroLote, fechaVencimiento, cantidadIn
     movimientoBase: { cantidad: cant, motivo: 'compra' },
   };
 }
+
+// ── Kardex, vencimientos, valor de inventario, conteo físico (Ciclo 3) ─────
+
+// Recorre movimientos YA ordenados cronológicamente (ascendente) y agrega
+// el saldo corrido a cada uno — se calcula siempre al vuelo, nunca se
+// guarda un saldo en ninguna tabla (mismo criterio que el stock general).
+function invCalcularKardex(movimientos) {
+  let saldo = 0;
+  return movimientos.map(m => {
+    saldo += (parseFloat(m.cantidad) || 0);
+    return {
+      ...m,
+      entrada: m.cantidad > 0 ? m.cantidad : null,
+      salida: m.cantidad < 0 ? Math.abs(m.cantidad) : null,
+      saldo,
+      // Documento: de dónde vino el movimiento, para la columna del Kardex.
+      documento: m.venta_id ? 'Venta' : m.cita_id ? 'Cita' : '—',
+    };
+  });
+}
+
+const INV_DIAS_ROJO = 30;
+const INV_DIAS_AMARILLO = 90;
+
+// 'vencido' | 'rojo_30' | 'amarillo_90' | null (fuera de horizonte o sin fecha)
+function invClasificarVencimiento(fechaVencimiento) {
+  if (!fechaVencimiento) return null;
+  const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+  const venc = new Date(fechaVencimiento + 'T00:00:00');
+  const dias = Math.round((venc - hoy) / 86400000);
+  if (dias < 0) return 'vencido';
+  if (dias <= INV_DIAS_ROJO) return 'rojo_30';
+  if (dias <= INV_DIAS_AMARILLO) return 'amarillo_90';
+  return null;
+}
+
+const INV_VENC_INFO = {
+  vencido:     { icon: '🔴', label: 'Vencido',     badge: 'bg-red' },
+  rojo_30:     { icon: '🟠', label: '0-30 días',   badge: 'bg-yellow' },
+  amarillo_90: { icon: '🟡', label: '31-90 días',  badge: 'bg-yellow' },
+};
+
+// Suma stock_actual * costo_unitario. Si un producto no tiene costo_unitario
+// cargado, usa precio_venta como respaldo (nunca inventa un número) y lo
+// marca en `conFallback` — para no mentir sobre qué tan confiable es el
+// total mostrado.
+function invCalcularValorInventario(filasConStock) {
+  let total = 0, conFallback = 0;
+  filasConStock.forEach(p => {
+    const costo = p.costo_unitario != null ? p.costo_unitario : p.precio_venta;
+    if (costo == null) return;
+    if (p.costo_unitario == null) conFallback++;
+    total += (parseFloat(p.stock_actual) || 0) * costo;
+  });
+  return { total: Math.round(total * 100) / 100, conFallback };
+}
+
+// Conteo físico: arma el movimiento de ajuste (nunca toca stock directo —
+// ya es imposible, no existe esa columna; esto deja explícita la regla).
+// diferencia = contado - sistema; si da 0, no hay nada que ajustar.
+function invConstruirAjusteConteo({ productoId, stockSistema, stockContado, nota }) {
+  if (!productoId) return { error: 'Selecciona un producto' };
+  const sistema = parseFloat(stockSistema);
+  const contado = parseFloat(stockContado);
+  if (isNaN(contado)) return { error: 'Escribe el conteo físico' };
+  const diferencia = Math.round((contado - (isNaN(sistema) ? 0 : sistema)) * 100) / 100;
+  if (diferencia === 0) return { error: 'No hay diferencia — nada que ajustar' };
+  return {
+    diferencia,
+    fila: {
+      producto_id: productoId,
+      cantidad: diferencia,
+      motivo: 'ajuste',
+      nota: (nota || '').trim() || `Conteo físico: sistema ${isNaN(sistema) ? 0 : sistema}, contado ${contado}`,
+    }
+  };
+}
