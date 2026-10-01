@@ -31,6 +31,8 @@ async function rVentas() {
     return;
   }
 
+  _ventaRenderWidget(ventas);
+
   if (!ventas.length) {
     cont.innerHTML = `<div class="empty-state" style="padding:36px"><div class="empty-ic">🛒</div>
       <div class="empty-t">Sin ventas registradas este día</div>
@@ -38,16 +40,38 @@ async function rVentas() {
     return;
   }
 
-  const totalDia = ventas.filter(v => !v.anulado).reduce((s, v) => s + (parseFloat(v.total) || 0), 0);
-  cont.innerHTML = `
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;font-size:12px;color:var(--g500)">
-      <span>${ventas.length} venta(s)</span><strong style="color:var(--navy)">Total del día: ${fmt$(totalDia)}</strong>
-    </div>
-    ${ventas.map(v => _renderVentaCard(v)).join('')}`;
+  cont.innerHTML = ventas.map(v => _renderVentaCard(v)).join('');
 }
 
 function _ventasSoloFecha(d) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+// Widget propio del día: total, cantidad, y desglose por método de pago —
+// siempre se pinta (incluso en 0 ventas), para que el panel no se sienta
+// vacío mientras #ventas-lista sí muestra su empty-state.
+function _ventaRenderWidget(ventas) {
+  const cont = document.getElementById('ventas-widget'); if (!cont) return;
+  const r = ventaCalcularResumen(ventas);
+  const desglose = Object.entries(r.porMetodo)
+    .filter(([, monto]) => monto > 0)
+    .map(([m, monto]) => `<div style="display:flex;justify-content:space-between;font-size:11.5px;padding:3px 0">
+      <span>${VENTA_METODOS_PAGO[m]}</span><strong>${fmt$(monto)}</strong></div>`).join('')
+    || '<p style="color:var(--g500);font-size:12px">Sin ventas este día</p>';
+
+  cont.innerHTML = `
+    <div class="kpi-row" style="grid-template-columns:repeat(2,1fr);margin-bottom:14px">
+      <div class="kpi-card" style="--c:var(--green)">
+        <div class="kc-ic">🛒</div><div class="kc-val">${fmt$(r.total)}</div><div class="kc-lbl">Total vendido este día</div>
+      </div>
+      <div class="kpi-card" style="--c:var(--brand)">
+        <div class="kc-ic">#️⃣</div><div class="kc-val">${r.cantidad}</div><div class="kc-lbl">Ventas registradas</div>
+      </div>
+    </div>
+    <div class="card" style="margin-bottom:14px">
+      <div class="card-hdr"><div class="card-title">Por método de pago</div></div>
+      <div class="card-body">${desglose}</div>
+    </div>`;
 }
 
 function _renderVentaCard(v) {

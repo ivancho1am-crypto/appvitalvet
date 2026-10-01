@@ -25,12 +25,16 @@ async function rFinanzas() {
   const fEl = document.getElementById('fin-rango-actual');
   if (fEl) fEl.textContent = `${desde.toLocaleDateString('es-CO')} – ${hasta.toLocaleDateString('es-CO')}`;
 
-  let facturas, resumenFacturas, gastos;
+  let facturas, resumenFacturas, gastos, ventas;
   try {
-    [facturas, resumenFacturas, gastos] = await Promise.all([
+    [facturas, resumenFacturas, gastos, ventas] = await Promise.all([
       FinanzasRepo.listarFacturas(desdeFecha, hastaFecha),
       FinanzasRepo.resumenFacturasEnRango(desdeFecha, hastaFecha),
       FinanzasRepo.listarGastos(desdeFecha, hastaFecha),
+      // Ventas directas: tabla aparte (VentasRepo, no FinanzasRepo), mismo
+      // criterio ya usado al revés en ventas-ui.js (llama a FinanzasRepo
+      // directo). Si el módulo Ventas no estuviera cargado, no rompe nada.
+      typeof VentasRepo !== 'undefined' ? VentasRepo.listarVentas(desdeFecha, hastaFecha) : Promise.resolve([]),
     ]);
   } catch (e) {
     console.warn('[finanzas] rFinanzas:', e);
@@ -59,6 +63,7 @@ async function rFinanzas() {
     } catch (e) { console.warn('[finanzas] resumenMensual:', e); }
   }
   if (!resumen) resumen = { ...finSumarResumenFacturas(resumenFacturas), gastos: finSumarGastos(gastos) };
+  resumen.ventasDirectas = finSumarVentasDirectas(ventas);
 
   FIN_CACHE_GASTOS = gastos;
   _finRenderResumen(resumen);
@@ -76,6 +81,11 @@ function _finRenderResumen(r) {
   setVal('fin-kpi-cobrado', r.cobrado);
   setVal('fin-kpi-porcobrar', r.porCobrar);
   setVal('fin-kpi-gastos', r.gastos);
+  // Ventas directas: aparte de los 4 de arriba a propósito — "cobrado" tiene
+  // que seguir coincidiendo exacto con finanzas_resumen_*. El combinado de
+  // abajo es solo una suma visual, no un número que se guarde en ningún lado.
+  setVal('fin-kpi-ventas', r.ventasDirectas);
+  setVal('fin-total-cobrado-real', r.cobrado + r.ventasDirectas);
 }
 
 // `resumenFacturas` trae cobrado/saldo_pendiente por factura_id — se cruza

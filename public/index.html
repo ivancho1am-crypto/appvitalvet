@@ -1041,6 +1041,20 @@ try { if(Object.keys(localStorage).some(k=>k.startsWith('sb-')&&k.includes('auth
         </div>
       </div>
 
+      <!-- Ventas directas: aparte de los 4 de arriba a propósito. "Cobrado"
+           sigue siendo exactamente lo que dice finanzas_resumen_* (pagos de
+           facturas); una venta de mostrador se registra ya cobrada pero por
+           fuera de ese circuito (decisión de Iván, 2026-10-02) — por eso se
+           muestra como su propio número, con el combinado abajo. -->
+      <div class="kpi-row" style="grid-template-columns:repeat(2,1fr);margin-top:10px">
+        <div class="kpi-card" style="--c:var(--brand)">
+          <div class="kc-ic">🛒</div><div class="kc-val" id="fin-kpi-ventas">$ 0</div><div class="kc-lbl">Ventas directas (mostrador/servicios)</div>
+        </div>
+        <div class="kpi-card kpi-finance" style="--c:var(--green)">
+          <div class="kc-ic">💰</div><div class="kc-val" id="fin-total-cobrado-real">$ 0</div><div class="kc-lbl">Total cobrado real (Facturas + Ventas)</div>
+        </div>
+      </div>
+
       <div class="card" style="margin-top:16px">
         <div class="card-hdr"><div class="card-title">🧾 Facturas emitidas</div></div>
         <div class="card-body" id="fin-facturas-tabla"></div>
@@ -1066,6 +1080,7 @@ try { if(Object.keys(localStorage).some(k=>k.startsWith('sb-')&&k.includes('auth
           <span class="ag-fecha-actual" id="ventas-fecha-actual"></span>
         </div>
       </div>
+      <div id="ventas-widget"></div>
       <div id="ventas-lista"></div>
     </div>
     </div><!-- /main-content -->

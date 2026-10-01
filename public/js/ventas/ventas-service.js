@@ -11,6 +11,21 @@ const VENTA_TIPOS_ITEM = { producto: 'Producto', servicio: 'Servicio' };
 // método de pago es obligatorio.
 const VENTA_METODOS_PAGO = { efectivo: 'Efectivo', transferencia: 'Transferencia', tarjeta: 'Tarjeta', otro: 'Otro' };
 
+// Resumen para el widget de Ventas: total y cantidad (excluyendo anuladas,
+// mismo criterio que "Total del día"), más el desglose por método de pago
+// — así se ve de un vistazo cuánto entró en efectivo vs. transferencia/etc.
+function ventaCalcularResumen(ventas) {
+  const activas = ventas.filter(v => !v.anulado);
+  const porMetodo = {};
+  Object.keys(VENTA_METODOS_PAGO).forEach(m => { porMetodo[m] = 0 });
+  activas.forEach(v => { porMetodo[v.metodo_pago] = (porMetodo[v.metodo_pago] || 0) + (parseFloat(v.total) || 0) });
+  return {
+    total: activas.reduce((s, v) => s + (parseFloat(v.total) || 0), 0),
+    cantidad: activas.length,
+    porMetodo,
+  };
+}
+
 // Arma y valida un ítem de venta. `subtotal` se calcula acá, nunca se
 // recibe ya calculado — una sola fórmula, un solo lugar.
 function ventaConstruirItem({ tipo, productoId, nombre, cantidad, precioUnitario }) {

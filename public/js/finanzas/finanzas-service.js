@@ -79,6 +79,16 @@ function finSumarGastos(gastos) {
   return gastos.reduce((s, g) => s + (parseFloat(g.monto) || 0), 0);
 }
 
+// Ventas directas (mostrador/servicios) — siempre se registran ya cobradas
+// (decisión de Iván, 2026-10-02: no pasan por facturas/pagos), así que su
+// total ES dinero cobrado, aunque viva en una tabla aparte de
+// finanzas_resumen_*. Se suma acá, nunca dentro de `cobrado` (ese número
+// tiene que seguir coincidiendo exacto con lo que dice la vista de
+// Supabase) — ver "Total cobrado real" en la UI para el combinado.
+function finSumarVentasDirectas(ventas) {
+  return ventas.filter(v => !v.anulado).reduce((s, v) => s + (parseFloat(v.total) || 0), 0);
+}
+
 // ── Pagos (Ciclo 4) ──────────────────────────────────────────────────────
 const FIN_METODOS_PAGO = {
   efectivo: 'Efectivo', transferencia: 'Transferencia', tarjeta: 'Tarjeta', otro: 'Otro',
