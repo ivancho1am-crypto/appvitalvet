@@ -5,6 +5,12 @@
 
 const VENTA_TIPOS_ITEM = { producto: 'Producto', servicio: 'Servicio' };
 
+// Mismo vocabulario que pagos.metodo (finanzas-service.js) — duplicado a
+// propósito, no importado entre módulos. Una venta siempre se registra ya
+// cobrada (decisión de Iván: no pasa por `pagos`/`facturas`), así que el
+// método de pago es obligatorio.
+const VENTA_METODOS_PAGO = { efectivo: 'Efectivo', transferencia: 'Transferencia', tarjeta: 'Tarjeta', otro: 'Otro' };
+
 // Arma y valida un ítem de venta. `subtotal` se calcula acá, nunca se
 // recibe ya calculado — una sola fórmula, un solo lugar.
 function ventaConstruirItem({ tipo, productoId, nombre, cantidad, precioUnitario }) {
@@ -28,19 +34,24 @@ function ventaConstruirItem({ tipo, productoId, nombre, cantidad, precioUnitario
 }
 
 // Valida la venta completa antes de guardarla: al menos 1 ítem, cliente
-// identificado de alguna forma (propietario real o nombre de mostrador).
-function ventaConstruirCabecera({ propietarioId, clienteNombre, fecha, items }) {
+// identificado de alguna forma (propietario real o nombre de mostrador),
+// y método de pago (toda venta se registra ya cobrada). `cuentaId` es
+// opcional: no bloquea el registro si todavía no hay cuentas creadas.
+function ventaConstruirCabecera({ propietarioId, clienteNombre, fecha, items, metodoPago, cuentaId }) {
   if (!items || !items.length) return { error: 'Agrega al menos un ítem a la venta' };
   if (!propietarioId && !(clienteNombre || '').trim()) {
     return { error: 'Selecciona un propietario o escribe un nombre de mostrador' };
   }
   if (!fecha) return { error: 'Selecciona una fecha' };
+  if (!metodoPago || !VENTA_METODOS_PAGO[metodoPago]) return { error: 'Selecciona un método de pago' };
   const total = items.reduce((s, i) => s + (parseFloat(i.subtotal) || 0), 0);
   return {
     venta: {
       propietario_id: propietarioId || null,
       cliente_nombre: propietarioId ? null : clienteNombre.trim(),
       fecha,
+      metodo_pago: metodoPago,
+      cuenta_id: cuentaId || null,
       total: Math.round(total * 100) / 100,
     }
   };
