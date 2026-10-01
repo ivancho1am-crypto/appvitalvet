@@ -1283,6 +1283,16 @@ try { if(Object.keys(localStorage).some(k=>k.startsWith('sb-')&&k.includes('auth
         <div class="fi"><label>Costo unitario</label><input type="number" id="inv-p-costo" placeholder="Opcional" min="0"></div>
         <div class="fi"><label>Precio de venta</label><input type="number" id="inv-p-precio" placeholder="Opcional" min="0"></div>
         <div class="fi ff"><label>Proveedor</label><input type="text" id="inv-p-prov" placeholder="Opcional"></div>
+
+        <div class="fdiv">Identificación (opcional)</div>
+        <div class="fi"><label>Código interno</label><input type="text" id="inv-p-codigo" placeholder="Opcional, único"></div>
+        <div class="fi"><label>Presentación</label><input type="text" id="inv-p-presentacion" placeholder="Ej. Caja x10, Frasco 50ml"></div>
+        <div class="fi ff"><label>Código de barras</label><input type="text" id="inv-p-barras" placeholder="Opcional"></div>
+
+        <div class="fdiv">Inventario (opcional)</div>
+        <div class="fi"><label>Stock máximo</label><input type="number" id="inv-p-max" placeholder="Opcional" min="0"></div>
+        <div class="fi"><label>Punto de reorden</label><input type="number" id="inv-p-reorden" placeholder="Opcional" min="0"></div>
+        <div class="fi"><label>Ubicación</label><input type="text" id="inv-p-ubicacion" placeholder="Ej. Estante 3"></div>
       </div>
     </div>
     <div class="mf">

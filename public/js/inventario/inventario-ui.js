@@ -57,12 +57,13 @@ function _invRenderTabla() {
     return;
   }
   cont.innerHTML = `<div class="tw"><table>
-    <thead><tr><th>Producto</th><th>Categoría</th><th>Stock</th><th>Mínimo</th><th>Costo</th><th>Precio venta</th><th>Acciones</th></tr></thead>
+    <thead><tr><th>Código</th><th>Producto</th><th>Categoría</th><th>Stock</th><th>Mínimo</th><th>Costo</th><th>Precio venta</th><th>Acciones</th></tr></thead>
     <tbody>${filas.map(p => `
       <tr>
-        <td>${p.nombre}${p.proveedor ? `<div style="font-size:11px;color:var(--g500)">${p.proveedor}</div>` : ''}</td>
+        <td>${p.codigo || '—'}</td>
+        <td>${p.nombre}${p.proveedor ? `<div style="font-size:11px;color:var(--g500)">${p.proveedor}</div>` : ''}${p.ubicacion ? `<div style="font-size:11px;color:var(--g500)">📍 ${p.ubicacion}</div>` : ''}</td>
         <td><span class="badge bg-gray">${invCategoriaInfo(p.categoria).icon} ${invCategoriaInfo(p.categoria).label}</span></td>
-        <td>${invEsBajoStock(p) ? '<span class="badge bg-red">' : '<span>'}${p.stock_actual} ${p.unidad}${invEsBajoStock(p) ? '</span>' : '</span>'}</td>
+        <td>${invEsBajoStock(p) ? '<span class="badge bg-red">' : invEsSobreStock(p) ? '<span class="badge bg-yellow">' : '<span>'}${p.stock_actual} ${p.unidad}${(invEsBajoStock(p) || invEsSobreStock(p)) ? '</span>' : '</span>'}</td>
         <td>${p.stock_minimo} ${p.unidad}</td>
         <td>${p.costo_unitario != null ? fmt$(p.costo_unitario) : '—'}</td>
         <td>${p.precio_venta != null ? fmt$(p.precio_venta) : '—'}</td>
@@ -92,10 +93,13 @@ async function _invActualizarBadge(stockYaCargado) {
 }
 
 // ── Modal "Nuevo/Editar producto" ──────────────────────────────────────────
+const INV_CAMPOS_PROD_TEXTO = ['inv-p-nombre', 'inv-p-unidad', 'inv-p-min', 'inv-p-costo', 'inv-p-precio', 'inv-p-prov',
+  'inv-p-codigo', 'inv-p-presentacion', 'inv-p-barras', 'inv-p-max', 'inv-p-reorden', 'inv-p-ubicacion'];
+
 function invAbrirNuevoProducto() {
   document.getElementById('inv-prod-id').value = '';
   document.getElementById('m-inv-prod-titulo').textContent = '📦 Nuevo producto';
-  ['inv-p-nombre', 'inv-p-unidad', 'inv-p-min', 'inv-p-costo', 'inv-p-precio', 'inv-p-prov'].forEach(id => { document.getElementById(id).value = '' });
+  INV_CAMPOS_PROD_TEXTO.forEach(id => { document.getElementById(id).value = '' });
   document.getElementById('inv-p-cat').value = 'medicamento';
   openM('m-inv-prod');
 }
@@ -112,6 +116,15 @@ function invAbrirEditarProducto(id) {
   document.getElementById('inv-p-costo').value = p.costo_unitario ?? '';
   document.getElementById('inv-p-precio').value = p.precio_venta ?? '';
   document.getElementById('inv-p-prov').value = p.proveedor || '';
+  // Fase 1 — campos nuevos, opcionales: un producto creado antes de este
+  // ciclo simplemente los trae en null/undefined y el formulario los
+  // muestra vacíos, sin romper nada.
+  document.getElementById('inv-p-codigo').value = p.codigo || '';
+  document.getElementById('inv-p-presentacion').value = p.presentacion || '';
+  document.getElementById('inv-p-barras').value = p.codigo_barras || '';
+  document.getElementById('inv-p-max').value = p.stock_maximo ?? '';
+  document.getElementById('inv-p-reorden').value = p.punto_reorden ?? '';
+  document.getElementById('inv-p-ubicacion').value = p.ubicacion || '';
   openM('m-inv-prod');
 }
 
@@ -125,6 +138,12 @@ async function invGuardarProducto() {
     costo: document.getElementById('inv-p-costo').value,
     precio: document.getElementById('inv-p-precio').value,
     proveedor: document.getElementById('inv-p-prov').value,
+    codigo: document.getElementById('inv-p-codigo').value,
+    presentacion: document.getElementById('inv-p-presentacion').value,
+    codigoBarras: document.getElementById('inv-p-barras').value,
+    stockMaximo: document.getElementById('inv-p-max').value,
+    puntoReorden: document.getElementById('inv-p-reorden').value,
+    ubicacion: document.getElementById('inv-p-ubicacion').value,
   });
   if (error) { toast(error, 'err'); return; }
 
@@ -137,7 +156,12 @@ async function invGuardarProducto() {
     closeM('m-inv-prod');
     rInventario();
   } catch (e) {
-    toast('No se pudo guardar el producto', 'err'); console.warn(e);
+    // Si el código ya existe en otro producto, Postgres lo rechaza por el
+    // índice único (idx_productos_codigo_unico) — se muestra tal cual en
+    // vez de un genérico, para que quede claro por qué falló.
+    const esCodigoDuplicado = /idx_productos_codigo_unico|duplicate key/i.test(e.message || '');
+    toast(esCodigoDuplicado ? 'Ese código ya está en uso por otro producto' : 'No se pudo guardar el producto', 'err');
+    console.warn(e);
   } finally {
     if (btn) { btn.disabled = false; btn.textContent = '💾 Guardar' }
   }

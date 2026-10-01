@@ -29,12 +29,27 @@ function invEsBajoStock(row) {
   return row.stock_minimo > 0 && row.stock_actual <= row.stock_minimo;
 }
 
-// Valida y arma la fila de un producto nuevo/editado.
-function invConstruirProducto({ nombre, categoria, unidad, stockMinimo, costo, precio, proveedor }) {
+// Mismo criterio que invEsBajoStock pero del otro lado: solo alerta si hay
+// stock_maximo definido (muchos productos nunca van a tener uno, y eso no
+// debe generar ruido).
+function invEsSobreStock(row) {
+  return row.stock_maximo != null && row.stock_maximo > 0 && row.stock_actual > row.stock_maximo;
+}
+
+// Valida y arma la fila de un producto nuevo/editado. Los campos de Fase 1
+// (codigo/presentacion/codigoBarras/stockMaximo/puntoReorden/ubicacion) son
+// todos opcionales — un producto viejo sin ninguno sigue siendo válido.
+function invConstruirProducto({ nombre, categoria, unidad, stockMinimo, costo, precio, proveedor,
+                                 codigo, presentacion, codigoBarras, stockMaximo, puntoReorden, ubicacion }) {
   if (!nombre || !nombre.trim()) return { error: 'Escribe el nombre del producto' };
   if (!categoria || !INV_CATEGORIAS[categoria]) return { error: 'Selecciona una categoría' };
   const min = parseFloat(stockMinimo);
   if (stockMinimo !== '' && (isNaN(min) || min < 0)) return { error: 'Stock mínimo inválido' };
+  const max = stockMaximo === '' || stockMaximo == null ? null : parseFloat(stockMaximo);
+  if (stockMaximo !== '' && stockMaximo != null && isNaN(max)) return { error: 'Stock máximo inválido' };
+  if (max != null && max < (isNaN(min) ? 0 : min)) return { error: 'El stock máximo no puede ser menor que el mínimo' };
+  const reorden = puntoReorden === '' || puntoReorden == null ? null : parseFloat(puntoReorden);
+  if (puntoReorden !== '' && puntoReorden != null && isNaN(reorden)) return { error: 'Punto de reorden inválido' };
   return {
     fila: {
       nombre: nombre.trim(),
@@ -44,6 +59,12 @@ function invConstruirProducto({ nombre, categoria, unidad, stockMinimo, costo, p
       costo_unitario: costo === '' || costo == null ? null : parseFloat(costo),
       precio_venta: precio === '' || precio == null ? null : parseFloat(precio),
       proveedor: (proveedor || '').trim() || null,
+      codigo: (codigo || '').trim() || null,
+      presentacion: (presentacion || '').trim() || null,
+      codigo_barras: (codigoBarras || '').trim() || null,
+      stock_maximo: max,
+      punto_reorden: reorden,
+      ubicacion: (ubicacion || '').trim() || null,
     }
   };
 }
