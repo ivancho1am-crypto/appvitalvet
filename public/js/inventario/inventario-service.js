@@ -71,8 +71,10 @@ function invConstruirProducto({ nombre, categoria, unidad, stockMinimo, costo, p
 
 // Valida y arma la fila de un movimiento. `accion` decide el signo de
 // `cantidad`: así el formulario siempre pide un número positivo y nunca hay
-// que explicarle al usuario que "para salida escribe negativo".
-function invConstruirMovimiento({ productoId, accion, cantidad, motivo, nota, citaId }) {
+// que explicarle al usuario que "para salida escribe negativo". `loteId` es
+// opcional — productos sin lote (o movimientos de categorías que no lo
+// necesitan) siguen funcionando exactamente igual que antes.
+function invConstruirMovimiento({ productoId, accion, cantidad, motivo, nota, citaId, loteId }) {
   if (!productoId) return { error: 'Selecciona un producto' };
   if (accion !== 'entrada' && accion !== 'salida') return { error: 'Selecciona entrada o salida' };
   const cant = parseFloat(cantidad);
@@ -87,7 +89,36 @@ function invConstruirMovimiento({ productoId, accion, cantidad, motivo, nota, ci
       // una vacuna durante esa consulta), queda enlazado — sin tocar historia
       // clínica ni vv_store, solo una referencia de contexto en inventario.
       cita_id: citaId || null,
+      lote_id: loteId || null,
       nota: (nota || '').trim() || null,
     }
+  };
+}
+
+// Valida y arma, en un solo paso, el lote nuevo Y el movimiento de entrada
+// inicial que le corresponde — crear un lote con cantidad > 0 SIEMPRE
+// genera su movimiento, nunca queda como un número suelto sin respaldo en
+// inventario_movimientos (eso rompería la regla de "el stock es la suma de
+// los movimientos"). `loteFila`/`movimientoFila` se insertan en dos pasos
+// desde el repository (el movimiento necesita el id del lote recién
+// creado), pero los dos se validan juntos acá.
+function invConstruirLote({ productoId, numeroLote, fechaVencimiento, cantidadInicial, costoUnitario, proveedor }) {
+  if (!productoId) return { error: 'Selecciona un producto' };
+  if (!numeroLote || !numeroLote.trim()) return { error: 'Escribe el número de lote' };
+  const cant = parseFloat(cantidadInicial);
+  if (isNaN(cant) || cant <= 0) return { error: 'La cantidad inicial debe ser mayor que cero' };
+  const costo = costoUnitario === '' || costoUnitario == null ? null : parseFloat(costoUnitario);
+  return {
+    loteFila: {
+      producto_id: productoId,
+      numero_lote: numeroLote.trim(),
+      fecha_vencimiento: fechaVencimiento || null,
+      cantidad_inicial: cant,
+      costo_unitario: costo,
+      proveedor: (proveedor || '').trim() || null,
+    },
+    // Se completa con producto_id/lote_id/creado_por en inventario-ui.js,
+    // una vez que el lote ya tiene id — acá solo lo que ya se conoce.
+    movimientoBase: { cantidad: cant, motivo: 'compra' },
   };
 }

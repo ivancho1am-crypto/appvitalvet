@@ -64,5 +64,28 @@ const InventarioRepo = {
     const { data, error } = await sb.from('inventario_stock_actual').select('producto_id, stock_actual, stock_minimo');
     if (error) { console.warn('[inventario] contarBajoStock:', error.message); return 0; }
     return (data || []).filter(r => r.stock_actual <= r.stock_minimo).length;
+  },
+
+  // ── Lotes (Ciclo 2) ──────────────────────────────────────────────────
+  async listarLotesDeProducto(productoId) {
+    const sb = getSB(); if (!sb || !productoId) return [];
+    const { data, error } = await sb.from('inventario_stock_por_lote').select('*')
+      .eq('producto_id', productoId).order('fecha_vencimiento', { ascending: true, nullsFirst: false });
+    if (error) { console.warn('[inventario] listarLotesDeProducto:', error.message); return []; }
+    return data || [];
+  },
+
+  async crearLote(fila) {
+    const sb = getSB(); if (!sb) throw new Error('Sin conexión');
+    const { data, error } = await sb.from('lotes').insert(fila).select().single();
+    if (error) throw error;
+    return data;
+  },
+
+  async actualizarLote(id, cambios) {
+    const sb = getSB(); if (!sb) throw new Error('Sin conexión');
+    const { data, error } = await sb.from('lotes').update(cambios).eq('id', id).select().single();
+    if (error) throw error;
+    return data;
   }
 };

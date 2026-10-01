@@ -69,6 +69,7 @@ function _invRenderTabla() {
         <td>${p.precio_venta != null ? fmt$(p.precio_venta) : '—'}</td>
         <td style="white-space:nowrap">
           <button class="btn btn-outline btn-xs" onclick="invAbrirMovimiento('${p.id}')">↕ Movimiento</button>
+          <button class="btn btn-outline btn-xs" onclick="invAbrirNuevoLote('${p.id}')">📦+ Lote</button>
           <button class="btn btn-outline btn-xs" onclick="invVerHistorial('${p.id}')">🕓</button>
           <button class="btn btn-outline btn-xs" onclick="invAbrirEditarProducto('${p.id}')">✎</button>
           <button class="btn btn-outline btn-xs" onclick="invDesactivarProducto('${p.id}')">🗑️</button>
@@ -189,6 +190,26 @@ async function invAbrirMovimiento(productoIdPreseleccionado) {
   document.getElementById('inv-m-nota').value = '';
   openM('m-inv-mov');
   _invCargarCitasDelSelect();   // no bloquea el modal: corre después de abrirlo
+  _invCargarLotesDelSelect(productoIdPreseleccionado || '');
+}
+
+// Lote opcional del movimiento — solo tiene sentido si el producto elegido
+// tiene lotes activos. Si no tiene ninguno (la mayoría de los productos,
+// hoy) el select queda en "Ninguno" sin molestar: el lote nunca es
+// obligatorio para registrar un movimiento.
+async function _invCargarLotesDelSelect(productoId) {
+  const sel = document.getElementById('inv-m-lote'); if (!sel) return;
+  sel.innerHTML = '<option value="">Ninguno</option>';
+  if (!productoId) return;
+  try {
+    const lotes = await InventarioRepo.listarLotesDeProducto(productoId);
+    sel.innerHTML += lotes.filter(l => l.stock_actual > 0).map(l =>
+      `<option value="${l.lote_id}">${l.numero_lote}${l.fecha_vencimiento ? ' — vence ' + l.fecha_vencimiento : ''} (stock: ${l.stock_actual})</option>`
+    ).join('');
+  } catch (e) { console.warn('[inventario] _invCargarLotesDelSelect:', e); }
+}
+function invMovimientoProductoCambiado() {
+  _invCargarLotesDelSelect(document.getElementById('inv-m-prod').value);
 }
 
 // Opcional, no crítico: si falla o Agenda no está cargada, el select queda
@@ -217,6 +238,7 @@ async function invGuardarMovimiento() {
     motivo: document.getElementById('inv-m-motivo').value,
     nota: document.getElementById('inv-m-nota').value,
     citaId: document.getElementById('inv-m-cita').value,
+    loteId: document.getElementById('inv-m-lote').value,
   });
   if (error) { toast(error, 'err'); return; }
 
@@ -253,4 +275,58 @@ async function invVerHistorial(productoId) {
       </div>
       <span class="badge ${m.cantidad > 0 ? 'bg-green' : 'bg-red'}">${m.cantidad > 0 ? '+' : ''}${m.cantidad}</span>
     </div>`).join('');
+}
+
+// ── Modal "Nuevo lote" (Ciclo 2) ────────────────────────────────────────────
+function invAbrirNuevoLote(productoId) {
+  const p = INV_CACHE_PRODUCTOS.find(x => x.id === productoId);
+  if (!p) { toast('Producto no encontrado', 'err'); return; }
+  document.getElementById('inv-l-producto-id').value = productoId;
+  document.getElementById('m-inv-lote-titulo').textContent = `📦 Nuevo lote — ${p.nombre}`;
+  document.getElementById('inv-l-numero').value = '';
+  document.getElementById('inv-l-vencimiento').value = '';
+  document.getElementById('inv-l-cantidad').value = '';
+  document.getElementById('inv-l-costo').value = p.costo_unitario ?? '';
+  document.getElementById('inv-l-proveedor').value = p.proveedor || '';
+  openM('m-inv-lote');
+}
+
+// Crea el lote y, encadenado, su movimiento de entrada inicial — un lote
+// con cantidad > 0 SIEMPRE queda respaldado por un movimiento real (nunca
+// un número suelto que no sume al SUM() del stock). Si el lote se crea
+// pero el movimiento falla, se avisa explícitamente qué quedó a medias,
+// mismo criterio que VentasRepo.crearVenta.
+async function invGuardarLote() {
+  const productoId = document.getElementById('inv-l-producto-id').value;
+  const { error, loteFila, movimientoBase } = invConstruirLote({
+    productoId,
+    numeroLote: document.getElementById('inv-l-numero').value,
+    fechaVencimiento: document.getElementById('inv-l-vencimiento').value,
+    cantidadInicial: document.getElementById('inv-l-cantidad').value,
+    costoUnitario: document.getElementById('inv-l-costo').value,
+    proveedor: document.getElementById('inv-l-proveedor').value,
+  });
+  if (error) { toast(error, 'err'); return; }
+
+  const btn = document.getElementById('inv-l-save-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Guardando…' }
+  try {
+    const lote = await InventarioRepo.crearLote(loteFila);
+    try {
+      await InventarioRepo.registrarMovimiento({ ...movimientoBase, producto_id: productoId, lote_id: lote.id });
+    } catch (eMov) {
+      toast(`Lote "${lote.numero_lote}" creado, pero su entrada inicial NO se registró: ${eMov.message}`, 'err');
+      console.warn(eMov);
+      closeM('m-inv-lote');
+      rInventario();
+      return;
+    }
+    toast('Lote registrado ✓', 'ok');
+    closeM('m-inv-lote');
+    rInventario();
+  } catch (e) {
+    toast('No se pudo crear el lote', 'err'); console.warn(e);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '💾 Guardar lote' }
+  }
 }

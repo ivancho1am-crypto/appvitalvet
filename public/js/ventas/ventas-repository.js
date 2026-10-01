@@ -55,6 +55,12 @@ const VentasRepo = {
         producto_id: i.producto_id,
         cantidad: -Math.abs(i.cantidad),
         motivo: 'venta',
+        // venta_id (Ciclo 2 de Inventario, 2026-10-03): enlace real además
+        // de la nota de texto — se mantienen los dos; la nota sigue
+        // sirviendo si `venta_id` todavía no existe en Supabase (código
+        // desplegado antes que la migración), y venta_id permite un join
+        // real para el Kardex una vez que la columna exista.
+        venta_id: venta.id,
         nota: `Venta #${venta.id}`,
       }));
     if (movimientos.length) {

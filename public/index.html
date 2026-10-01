@@ -1308,7 +1308,7 @@ try { if(Object.keys(localStorage).some(k=>k.startsWith('sb-')&&k.includes('auth
     <div class="mh"><div class="mt">↕ Registrar movimiento</div><button class="mx" onclick="closeM('m-inv-mov')">✕</button></div>
     <div class="mb">
       <div class="fg">
-        <div class="fi ff"><label>Producto *</label><select id="inv-m-prod"></select></div>
+        <div class="fi ff"><label>Producto *</label><select id="inv-m-prod" onchange="invMovimientoProductoCambiado()"></select></div>
         <div class="fi"><label>Acción *</label>
           <select id="inv-m-accion"><option value="entrada">⬆️ Entrada</option><option value="salida">⬇️ Salida</option></select></div>
         <div class="fi"><label>Cantidad *</label><input type="number" id="inv-m-cant" placeholder="0" min="0" step="any"></div>
@@ -1321,6 +1321,7 @@ try { if(Object.keys(localStorage).some(k=>k.startsWith('sb-')&&k.includes('auth
             <option value="devolucion">Devolución de proveedor (salida)</option>
             <option value="otro">Otro</option>
           </select></div>
+        <div class="fi ff"><label>Lote (opcional)</label><select id="inv-m-lote"><option value="">Ninguno</option></select></div>
         <div class="fi ff"><label>Cita relacionada (opcional)</label><select id="inv-m-cita"><option value="">Ninguna</option></select></div>
         <div class="fi ff"><label>Nota</label><textarea id="inv-m-nota" placeholder="Opcional" style="min-height:55px"></textarea></div>
       </div>
@@ -1328,6 +1329,28 @@ try { if(Object.keys(localStorage).some(k=>k.startsWith('sb-')&&k.includes('auth
     <div class="mf">
       <button class="btn btn-outline" onclick="closeM('m-inv-mov')">Cancelar</button>
       <button class="btn btn-green" id="inv-m-save-btn" onclick="invGuardarMovimiento()">💾 Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- NUEVO LOTE (Inventario — Ciclo 2) -->
+<div class="mo" id="m-inv-lote">
+  <div class="md">
+    <div class="mh"><div class="mt" id="m-inv-lote-titulo">📦 Nuevo lote</div><button class="mx" onclick="closeM('m-inv-lote')">✕</button></div>
+    <div class="mb">
+      <input type="hidden" id="inv-l-producto-id">
+      <div class="fg">
+        <div class="fi"><label>Número de lote *</label><input type="text" id="inv-l-numero" placeholder="Ej. A123"></div>
+        <div class="fi"><label>Fecha de vencimiento</label><input type="date" id="inv-l-vencimiento"></div>
+        <div class="fi"><label>Cantidad inicial *</label><input type="number" id="inv-l-cantidad" placeholder="0" min="0" step="any"></div>
+        <div class="fi"><label>Costo unitario</label><input type="number" id="inv-l-costo" placeholder="Opcional" min="0"></div>
+        <div class="fi ff"><label>Proveedor</label><input type="text" id="inv-l-proveedor" placeholder="Opcional"></div>
+      </div>
+      <p style="font-size:11px;color:var(--g500);margin-top:6px">Al guardar, se registra automáticamente la entrada inicial de este lote en el inventario.</p>
+    </div>
+    <div class="mf">
+      <button class="btn btn-outline" onclick="closeM('m-inv-lote')">Cancelar</button>
+      <button class="btn btn-green" id="inv-l-save-btn" onclick="invGuardarLote()">💾 Guardar lote</button>
     </div>
   </div>
 </div>
