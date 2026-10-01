@@ -61,6 +61,7 @@ function _renderVentaCard(v) {
         <span class="badge bg-green">${fmt$(v.total)}</span>
       </div>
       <div class="ag-card-sub">${(v.items || []).map(i => `${i.cantidad}× ${i.nombre}`).join(' · ') || 'Sin ítems'}</div>
+      <div class="ag-card-sub">${VENTA_METODOS_PAGO[v.metodo_pago] || v.metodo_pago || ''}</div>
     </div>
     <div class="ag-card-acciones">
       ${!v.anulado ? `<button class="btn btn-outline btn-xs" onclick="ventaAnular('${v.id}')">🚫 Anular</button>` : ''}
@@ -87,6 +88,7 @@ function ventaAbrirNueva() {
   _ventaRenderItems();
   document.getElementById('venta-cliente-nombre').value = '';
   document.getElementById('venta-fecha').value = _ventasSoloFecha(new Date());
+  document.getElementById('venta-metodo-pago').value = 'efectivo';
 
   const selProp = document.getElementById('venta-propietario');
   const props = DB.get('props');
@@ -96,6 +98,19 @@ function ventaAbrirNueva() {
   ventaCambiarTipoItem('producto');
   _ventaCargarServicios();
   openM('m-venta');
+
+  // Cuenta (caja/banco) opcional — reusa FinanzasRepo, igual que ya se
+  // reusa InventarioRepo acá abajo. Si no hay cuentas o falla, el select
+  // queda en "Ninguna" sin bloquear el formulario (mismo criterio que
+  // _invCargarCitasDelSelect en Inventario).
+  (async () => {
+    const selCta = document.getElementById('venta-cuenta');
+    selCta.innerHTML = '<option value="">Ninguna</option>';
+    try {
+      const cuentas = await FinanzasRepo.listarCuentas();
+      selCta.innerHTML += cuentas.map(c => `<option value="${c.id}">${c.nombre} (${c.tipo})</option>`).join('');
+    } catch (e) { console.warn('[ventas] listarCuentas:', e); }
+  })();
 
   VENTAS_CACHE_PRODUCTOS = [];
   (async () => {
@@ -224,6 +239,8 @@ async function ventaGuardarCompleta() {
     clienteNombre: document.getElementById('venta-cliente-nombre').value,
     fecha: document.getElementById('venta-fecha').value,
     items: VENTA_ITEMS_ACTUAL,
+    metodoPago: document.getElementById('venta-metodo-pago').value,
+    cuentaId: document.getElementById('venta-cuenta').value,
   });
   if (error) { toast(error, 'err'); return; }
 

@@ -1399,6 +1399,14 @@ try { if(Object.keys(localStorage).some(k=>k.startsWith('sb-')&&k.includes('auth
         <div class="fi"><label>Propietario</label><select id="venta-propietario"></select></div>
         <div class="fi"><label>Cliente de mostrador</label><input type="text" id="venta-cliente-nombre" placeholder="Si no eliges propietario arriba"></div>
         <div class="fi"><label>Fecha *</label><input type="date" id="venta-fecha"></div>
+        <div class="fi"><label>Método de pago *</label>
+          <select id="venta-metodo-pago">
+            <option value="efectivo">Efectivo</option>
+            <option value="transferencia">Transferencia</option>
+            <option value="tarjeta">Tarjeta</option>
+            <option value="otro">Otro</option>
+          </select></div>
+        <div class="fi"><label>Cuenta (caja/banco)</label><select id="venta-cuenta"><option value="">Ninguna</option></select></div>
       </div>
 
       <div class="fdiv">Agregar ítem</div>
@@ -1562,8 +1570,10 @@ try { if(Object.keys(localStorage).some(k=>k.startsWith('sb-')&&k.includes('auth
 <script src="/js/finanzas/finanzas-repository.js"></script>
 <script src="/js/finanzas/finanzas-service.js"></script>
 <script src="/js/finanzas/finanzas-ui.js"></script>
-<!-- ventas/* va después de cotizacion.js/inventario/* (lee DB.get('procs')
-     y llama InventarioRepo), y antes de app.js. -->
+<!-- ventas/* va después de cotizacion.js/inventario/*/finanzas/* (lee
+     DB.get('procs'), llama InventarioRepo.listarProductos()/listarStock()
+     y FinanzasRepo.listarCuentas() — para el select de cuenta caja/banco
+     del modal), y antes de app.js. -->
 <script src="/js/ventas/ventas-repository.js"></script>
 <script src="/js/ventas/ventas-service.js"></script>
 <script src="/js/ventas/ventas-ui.js"></script>
