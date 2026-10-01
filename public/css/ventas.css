@@ -1,0 +1,29 @@
+/* Ventas — todo acotado a .vv-ventas, mismo motivo que agenda.css/
+   estadisticas.css: no reemplaza ninguna clase existente, solo agrega las
+   suyas. Reutiliza la MISMA estructura visual de tarjeta que ya usa Agenda
+   (hora + cuerpo + acciones) — declaraciones propias, no las .ag-* de
+   agenda.css (esas están scopeadas a .vv-agenda, no aplicarían acá). */
+
+.vv-ventas .ag-toolbar{
+  display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap;
+}
+.vv-ventas .ag-nav-dia{display:flex;align-items:center;gap:8px}
+.vv-ventas .ag-fecha-actual{font-size:13px;font-weight:700;color:var(--navy);min-width:200px;text-transform:capitalize}
+
+.vv-ventas .ag-card{
+  display:flex;gap:14px;align-items:flex-start;background:#fff;border:1px solid var(--g200);
+  border-radius:var(--r-sm);padding:12px 14px;margin-bottom:8px;
+}
+.vv-ventas .ag-card-hora{
+  font-family:'DM Mono',monospace;font-size:14px;font-weight:700;color:var(--navy);min-width:56px;
+}
+.vv-ventas .ag-card-body{flex:1;min-width:0}
+.vv-ventas .ag-card-top{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.vv-ventas .ag-card-mascota{font-size:13px;font-weight:700;color:var(--navy)}
+.vv-ventas .ag-card-sub{font-size:11.5px;color:var(--g500);margin-top:2px}
+.vv-ventas .ag-card-acciones{display:flex;flex-direction:column;gap:5px;flex-shrink:0}
+
+@media(max-width:768px){
+  .vv-ventas .ag-card{flex-direction:column}
+  .vv-ventas .ag-card-acciones{flex-direction:row;flex-wrap:wrap}
+}

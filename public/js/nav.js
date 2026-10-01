@@ -22,6 +22,8 @@ function go(page, btn) {
   // bien a un contador chico, y mostrar solo un número sin signo/contexto
   // confundiría más de lo que ayuda.
   if (page === 'finanzas' && typeof rFinanzas === 'function') rFinanzas();
+  // Ventas: igual que los demás, se recalcula al entrar.
+  if (page === 'ventas' && typeof rVentas === 'function') rVentas();
 }
 
 function boot() {

@@ -9,6 +9,7 @@
 <link rel="stylesheet" href="/css/styles.css">
 <link rel="stylesheet" href="/css/estadisticas.css">
 <link rel="stylesheet" href="/css/agenda.css">
+<link rel="stylesheet" href="/css/ventas.css">
 <style>
 /* ── Portada estilo videojuego (splash de entrada) ──────────────────
    .av-splash-imgbox mantiene SIEMPRE la proporción real de la imagen
@@ -179,6 +180,9 @@ try { if(Object.keys(localStorage).some(k=>k.startsWith('sb-')&&k.includes('auth
       </button>
       <button class="tab-btn sidebar-item" data-module-status="existing" onclick="go('finanzas',this)">
         <span class="si-ico">💰</span><span>Finanzas</span>
+      </button>
+      <button class="tab-btn sidebar-item" data-module-status="existing" onclick="go('ventas',this)">
+        <span class="si-ico">🛒</span><span>Ventas</span>
       </button>
 
       <div class="sidebar-section">Próximamente</div>
@@ -1037,6 +1041,23 @@ try { if(Object.keys(localStorage).some(k=>k.startsWith('sb-')&&k.includes('auth
         <div id="fin-gastos-tabla"></div>
       </div>
     </div>
+
+    <!-- ══ VENTAS ══ -->
+    <div class="page vv-ventas" id="page-ventas">
+      <div class="sec-hdr">
+        <div><div class="sec-title">🛒 Ventas — registro diario</div></div>
+        <button class="btn btn-green" onclick="ventaAbrirNueva()">+ Nueva venta</button>
+      </div>
+      <div class="ag-toolbar">
+        <div class="ag-nav-dia">
+          <button class="btn btn-outline btn-sm" onclick="ventasDiaAnterior()">←</button>
+          <button class="btn btn-outline btn-sm" onclick="ventasHoy()">Hoy</button>
+          <button class="btn btn-outline btn-sm" onclick="ventasDiaSiguiente()">→</button>
+          <span class="ag-fecha-actual" id="ventas-fecha-actual"></span>
+        </div>
+      </div>
+      <div id="ventas-lista"></div>
+    </div>
     </div><!-- /main-content -->
   </div><!-- /app-main -->
   </div><!-- /app-shell -->
@@ -1359,6 +1380,65 @@ try { if(Object.keys(localStorage).some(k=>k.startsWith('sb-')&&k.includes('auth
   </div>
 </div>
 
+<!-- NUEVA VENTA (Ventas) -->
+<div class="mo vv-ventas" id="m-venta">
+  <div class="md" style="max-width:640px">
+    <div class="mh"><div class="mt">🛒 Nueva venta</div><button class="mx" onclick="closeM('m-venta')">✕</button></div>
+    <div class="mb">
+      <div class="fg">
+        <div class="fi"><label>Propietario</label><select id="venta-propietario"></select></div>
+        <div class="fi"><label>Cliente de mostrador</label><input type="text" id="venta-cliente-nombre" placeholder="Si no eliges propietario arriba"></div>
+        <div class="fi"><label>Fecha *</label><input type="date" id="venta-fecha"></div>
+      </div>
+
+      <div class="fdiv">Agregar ítem</div>
+      <input type="hidden" id="venta-item-tipo" value="producto">
+      <div class="ftabs" style="margin-bottom:10px">
+        <button class="ftab on" data-tipo-item="producto" onclick="ventaCambiarTipoItem('producto')">📦 Producto</button>
+        <button class="ftab" data-tipo-item="servicio" onclick="ventaCambiarTipoItem('servicio')">🩺 Servicio</button>
+      </div>
+
+      <div id="venta-item-prod-wrap">
+        <div class="fi ff"><label>Producto</label>
+          <select id="venta-item-producto" onchange="ventaPrecioDesdeOpcion('venta-item-producto','venta-item-precio')"></select></div>
+      </div>
+      <div id="venta-item-serv-wrap" style="display:none">
+        <div class="fi ff"><label>Servicio</label>
+          <select id="venta-item-servicio" onchange="ventaServicioSeleccionado()"></select></div>
+        <div id="venta-serv-nuevo-wrap" style="display:none" class="fg">
+          <div class="fi ff"><label>Nombre del servicio nuevo</label><input type="text" id="venta-serv-nuevo-nombre" placeholder="Ej. Corte de uñas"></div>
+          <div class="fi"><label>Categoría</label>
+            <select id="venta-serv-nuevo-cat">
+              <option value="consulta">Consulta</option><option value="cirugia">Cirugía</option>
+              <option value="laboratorio">Laboratorio</option><option value="imagen">Imagen</option>
+              <option value="vacunacion">Vacunación</option><option value="hospitalizacion">Hospitalización</option>
+              <option value="peluqueria">Peluquería</option><option value="otro" selected>Otro</option>
+            </select></div>
+          <div class="fi"><label>Precio</label><input type="number" id="venta-serv-nuevo-precio" min="0" placeholder="0"></div>
+          <div class="fi ff"><button class="btn btn-outline btn-sm" onclick="ventaGuardarServicioNuevo()">💾 Guardar servicio en el catálogo</button></div>
+        </div>
+        <input type="hidden" id="venta-item-nombre-manual">
+      </div>
+
+      <div class="fg">
+        <div class="fi"><label>Cantidad</label><input type="number" id="venta-item-cant" value="1" min="0.01" step="any"></div>
+        <div class="fi"><label>Precio unitario</label><input type="number" id="venta-item-precio" min="0" placeholder="0"></div>
+        <div class="fi ff"><button class="btn btn-outline" onclick="ventaAgregarItemALista()">+ Agregar ítem a la venta</button></div>
+      </div>
+
+      <div class="fdiv">Ítems de esta venta</div>
+      <div id="venta-items-lista"></div>
+      <div style="display:flex;justify-content:flex-end;margin-top:8px;font-size:14px">
+        <strong>Total: <span id="venta-total-corriendo">$ 0</span></strong>
+      </div>
+    </div>
+    <div class="mf">
+      <button class="btn btn-outline" onclick="closeM('m-venta')">Cancelar</button>
+      <button class="btn btn-green" id="venta-save-btn" onclick="ventaGuardarCompleta()">💾 Registrar venta</button>
+    </div>
+  </div>
+</div>
+
 <!-- PROCEDIMIENTO -->
 <div class="mo" id="m-proc">
   <div class="md">
@@ -1472,6 +1552,11 @@ try { if(Object.keys(localStorage).some(k=>k.startsWith('sb-')&&k.includes('auth
 <script src="/js/finanzas/finanzas-repository.js"></script>
 <script src="/js/finanzas/finanzas-service.js"></script>
 <script src="/js/finanzas/finanzas-ui.js"></script>
+<!-- ventas/* va después de cotizacion.js/inventario/* (lee DB.get('procs')
+     y llama InventarioRepo), y antes de app.js. -->
+<script src="/js/ventas/ventas-repository.js"></script>
+<script src="/js/ventas/ventas-service.js"></script>
+<script src="/js/ventas/ventas-ui.js"></script>
 <script src="/js/app.js"></script>
 
 </body>
