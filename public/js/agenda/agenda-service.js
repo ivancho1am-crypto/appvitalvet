@@ -77,3 +77,23 @@ function agTituloDia(claveISO) {
   const d = new Date(claveISO + 'T00:00:00');
   return d.toLocaleDateString('es-CO', { day: 'numeric', month: 'short', weekday: 'long' });
 }
+
+// Rango del mes de `fecha` (o de hoy), PADDEADO a semanas completas
+// (lunes a domingo) para que la grilla de 7 columnas de la vista Mes no
+// tenga huecos al principio/final. `primerDia`/`ultimoDia` (sin padding)
+// se devuelven aparte, para saber qué celdas pintar "fuera de mes".
+function agRangoMes(fecha) {
+  const d = fecha ? new Date(fecha) : new Date();
+  const primerDia = new Date(d.getFullYear(), d.getMonth(), 1);
+  const ultimoDia = new Date(d.getFullYear(), d.getMonth() + 1, 0);
+
+  const diaSemanaPrimero = primerDia.getDay();              // 0=domingo..6=sábado
+  const offsetInicio = diaSemanaPrimero === 0 ? 6 : diaSemanaPrimero - 1;
+  const desde = new Date(primerDia); desde.setDate(desde.getDate() - offsetInicio); desde.setHours(0, 0, 0, 0);
+
+  const diaSemanaUltimo = ultimoDia.getDay();
+  const offsetFin = diaSemanaUltimo === 0 ? 0 : 7 - diaSemanaUltimo;
+  const hasta = new Date(ultimoDia); hasta.setDate(hasta.getDate() + offsetFin); hasta.setHours(23, 59, 59, 999);
+
+  return { desde, hasta, primerDia, ultimoDia };
+}

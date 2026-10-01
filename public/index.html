@@ -418,15 +418,25 @@ try { if(Object.keys(localStorage).some(k=>k.startsWith('sb-')&&k.includes('auth
         <div class="ftabs">
           <button class="ftab on" onclick="agVerLista(this)">Lista (14 días)</button>
           <button class="ftab" onclick="agVerDia(this)">Día</button>
+          <button class="ftab" onclick="agVerMes(this)">Mes</button>
         </div>
-        <div class="ag-nav-dia">
+        <div class="ag-nav-dia" id="ag-nav-dia">
           <button class="btn btn-outline btn-sm" onclick="agDiaAnterior()">←</button>
           <button class="btn btn-outline btn-sm" onclick="agHoy()">Hoy</button>
           <button class="btn btn-outline btn-sm" onclick="agDiaSiguiente()">→</button>
-          <span class="ag-fecha-actual" id="ag-fecha-actual">Próximos 14 días</span>
         </div>
+        <div class="ag-nav-dia" id="ag-nav-mes" style="display:none">
+          <button class="btn btn-outline btn-sm" onclick="agMesAnterior()">←</button>
+          <button class="btn btn-outline btn-sm" onclick="agMesHoy()">Hoy</button>
+          <button class="btn btn-outline btn-sm" onclick="agMesSiguiente()">→</button>
+        </div>
+        <span class="ag-fecha-actual" id="ag-fecha-actual">Próximos 14 días</span>
       </div>
       <div id="ag-lista"></div>
+      <div id="ag-cal-wrap" style="display:none">
+        <div class="ag-cal-grid" id="ag-cal-grid"></div>
+        <div class="ag-cal-detalle-wrap" id="ag-cal-detalle"></div>
+      </div>
     </div>
 
     <!-- ══ HISTORIA CLINICA ══ -->

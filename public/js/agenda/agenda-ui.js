@@ -4,11 +4,16 @@
 // Supabase directo. Mismo patrón de los demás módulos: render() + funciones
 // sueltas colgadas de window, sin clases ni build step.
 
-let AG_VISTA = 'lista';      // 'lista' | 'dia'
+let AG_VISTA = 'lista';      // 'lista' | 'dia' | 'mes'
 let AG_FECHA = new Date();   // fecha de referencia para la vista Día
+let AG_MES_REF = new Date(); // mes de referencia para la vista Mes (cualquier día de ese mes)
+let AG_CITAS_MES = [];       // último listar() de la vista Mes, cacheado para no re-pedir al elegir un día
+let AG_DIA_SEL = null;       // 'YYYY-MM-DD' elegido en la grilla del mes
 
 // ── Render principal — lo llama go('agenda', ...) en nav.js ─────────────
 async function rAgenda() {
+  if (AG_VISTA === 'mes') return _renderVistaMes();
+
   const cont = document.getElementById('ag-lista'); if (!cont) return;
   cont.innerHTML = '<div class="empty-state" style="padding:30px"><div class="empty-s">Cargando…</div></div>';
 
@@ -73,12 +78,111 @@ function _renderCitaCard(c) {
   </div>`;
 }
 
+// ── Vista Mes (calendario) ──────────────────────────────────────────────────
+// Separado en 3 pasos — fetch (acá), pintar grilla, pintar detalle del día —
+// para que elegir un día NO dispare una consulta nueva: ya se tienen todas
+// las citas del mes en AG_CITAS_MES desde que se entró a la vista.
+async function _renderVistaMes() {
+  const grid = document.getElementById('ag-cal-grid'); if (!grid) return;
+  grid.innerHTML = '<div class="empty-state" style="padding:30px;grid-column:1/-1"><div class="empty-s">Cargando…</div></div>';
+  const detalle = document.getElementById('ag-cal-detalle'); if (detalle) detalle.innerHTML = '';
+
+  const fEl = document.getElementById('ag-fecha-actual');
+  if (fEl) fEl.textContent = AG_MES_REF.toLocaleDateString('es-CO', { month: 'long', year: 'numeric' });
+
+  const { desde, hasta } = agRangoMes(AG_MES_REF);
+  try {
+    AG_CITAS_MES = await AgendaRepo.listar(desde.toISOString(), hasta.toISOString());
+  } catch (e) {
+    console.warn('[agenda] _renderVistaMes:', e);
+    grid.innerHTML = `<div class="empty-state" style="padding:36px;grid-column:1/-1"><div class="empty-ic">⚠️</div>
+      <div class="empty-t">No se pudo cargar la agenda</div>
+      <div class="empty-s">Verifica tu conexión e intenta de nuevo</div></div>`;
+    return;
+  }
+  _renderGridMes();
+  _renderDetalleDiaMes();
+  _actualizarBadge();
+}
+
+const AG_CAL_COLORES = {
+  programada: '#9ca3af', confirmada: '#0b7c7a', atendida: '#22aa86',
+  cancelada: '#dc2626', no_asistio: '#d97706',
+};
+
+function _renderGridMes() {
+  const grid = document.getElementById('ag-cal-grid'); if (!grid) return;
+  const { desde, hasta, primerDia } = agRangoMes(AG_MES_REF);
+  const grupos = agAgruparPorDia(AG_CITAS_MES);
+  const hoyClave = _agSoloFecha(new Date());
+  const diasSemana = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+
+  let html = diasSemana.map(d => `<div class="ag-cal-dow">${d}</div>`).join('');
+  const cursor = new Date(desde);
+  while (cursor <= hasta) {
+    const clave = _agSoloFecha(cursor);
+    const enMes = cursor.getMonth() === primerDia.getMonth();
+    const citasDelDia = grupos[clave] || [];
+    const marcadores = citasDelDia.slice(0, 4)
+      .map(c => `<span class="ag-cal-dot" style="background:${AG_CAL_COLORES[c.estado] || AG_CAL_COLORES.programada}"></span>`).join('');
+    const extra = citasDelDia.length > 4 ? `<span class="ag-cal-mas">+${citasDelDia.length - 4}</span>` : '';
+    html += `<div class="ag-cal-cell${enMes ? '' : ' fuera'}${clave === hoyClave ? ' hoy' : ''}${clave === AG_DIA_SEL ? ' sel' : ''}" onclick="agSeleccionarDiaMes('${clave}')">
+      <span class="ag-cal-num">${cursor.getDate()}</span>
+      <div class="ag-cal-marcadores">${marcadores}${extra}</div>
+    </div>`;
+    cursor.setDate(cursor.getDate() + 1);
+  }
+  grid.innerHTML = html;
+}
+
+// Reusa _renderCitaCard tal cual — mismo criterio pedido: mostrar el detalle
+// del día sin navegar a otra página ni duplicar cómo se ve una cita.
+function _renderDetalleDiaMes() {
+  const cont = document.getElementById('ag-cal-detalle'); if (!cont) return;
+  if (!AG_DIA_SEL) {
+    cont.innerHTML = '<p style="color:var(--g500);font-size:12px;padding:10px 0">Elegí un día de la grilla para ver sus citas.</p>';
+    return;
+  }
+  const citas = (AG_CITAS_MES || []).filter(c => (c.fecha_hora || '').slice(0, 10) === AG_DIA_SEL);
+  const titulo = agTituloDia(AG_DIA_SEL);
+  if (!citas.length) {
+    cont.innerHTML = `<div class="ag-cal-detalle-hdr">${titulo}</div><p style="color:var(--g500);font-size:12px">Sin citas este día</p>`;
+    return;
+  }
+  cont.innerHTML = `<div class="ag-cal-detalle-hdr">${titulo}</div>${citas.map(c => _renderCitaCard(c)).join('')}`;
+}
+
+function agSeleccionarDiaMes(clave) {
+  AG_DIA_SEL = AG_DIA_SEL === clave ? null : clave;   // click de nuevo = deselecciona
+  _renderGridMes();
+  _renderDetalleDiaMes();
+}
+
+function agMesAnterior() { AG_MES_REF = new Date(AG_MES_REF.getFullYear(), AG_MES_REF.getMonth() - 1, 1); AG_DIA_SEL = null; rAgenda(); }
+function agMesSiguiente() { AG_MES_REF = new Date(AG_MES_REF.getFullYear(), AG_MES_REF.getMonth() + 1, 1); AG_DIA_SEL = null; rAgenda(); }
+function agMesHoy() { AG_MES_REF = new Date(); AG_DIA_SEL = _agSoloFecha(new Date()); rAgenda(); }
+
+function _agSoloFecha(d) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
 // ── Navegación de vista ───────────────────────────────────────────────────
-function agVerLista(btn) { AG_VISTA = 'lista'; _marcarBotonVista(btn); rAgenda(); }
-function agVerDia(btn) { AG_VISTA = 'dia'; _marcarBotonVista(btn); rAgenda(); }
+function agVerLista(btn) { AG_VISTA = 'lista'; _marcarBotonVista(btn); _mostrarContenedorVista(); rAgenda(); }
+function agVerDia(btn) { AG_VISTA = 'dia'; _marcarBotonVista(btn); _mostrarContenedorVista(); rAgenda(); }
+function agVerMes(btn) { AG_VISTA = 'mes'; _marcarBotonVista(btn); _mostrarContenedorVista(); rAgenda(); }
 function _marcarBotonVista(btn) {
   document.querySelectorAll('#page-agenda .ftab').forEach(b => b.classList.remove('on'));
   if (btn) btn.classList.add('on');
+}
+// Lista/Día comparten #ag-lista; Mes tiene su propia grilla+detalle — y cada
+// vista tiene su propio grupo de nav (día anterior/hoy/siguiente vs.
+// mes anterior/hoy/siguiente), nunca los dos a la vez.
+function _mostrarContenedorVista() {
+  const esMes = AG_VISTA === 'mes';
+  const lista = document.getElementById('ag-lista'); if (lista) lista.style.display = esMes ? 'none' : '';
+  const cal = document.getElementById('ag-cal-wrap'); if (cal) cal.style.display = esMes ? '' : 'none';
+  const navDia = document.getElementById('ag-nav-dia'); if (navDia) navDia.style.display = esMes ? 'none' : '';
+  const navMes = document.getElementById('ag-nav-mes'); if (navMes) navMes.style.display = esMes ? '' : 'none';
 }
 function agDiaAnterior() { AG_FECHA.setDate(AG_FECHA.getDate() - 1); rAgenda(); }
 function agDiaSiguiente() { AG_FECHA.setDate(AG_FECHA.getDate() + 1); rAgenda(); }
