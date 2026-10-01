@@ -141,11 +141,18 @@ async function _invActualizarBadge(stockYaCargado) {
 const INV_CAMPOS_PROD_TEXTO = ['inv-p-nombre', 'inv-p-unidad', 'inv-p-min', 'inv-p-costo', 'inv-p-precio', 'inv-p-prov',
   'inv-p-codigo', 'inv-p-presentacion', 'inv-p-barras', 'inv-p-max', 'inv-p-reorden', 'inv-p-ubicacion'];
 
+const INV_CAMPOS_PROD_LOTE = ['inv-p-lote-numero', 'inv-p-lote-fabricacion', 'inv-p-lote-vencimiento', 'inv-p-lote-cantidad'];
+
 function invAbrirNuevoProducto() {
   document.getElementById('inv-prod-id').value = '';
   document.getElementById('m-inv-prod-titulo').textContent = '📦 Nuevo producto';
   INV_CAMPOS_PROD_TEXTO.forEach(id => { document.getElementById(id).value = '' });
   document.getElementById('inv-p-cat').value = 'medicamento';
+  // "Primer lote" solo tiene sentido al CREAR — un producto existente ya
+  // tiene su propio botón "📦+ Lote" para agregar lotes nuevos.
+  const wrap = document.getElementById('inv-p-lote-wrap');
+  if (wrap) wrap.style.display = '';
+  INV_CAMPOS_PROD_LOTE.forEach(id => { const el = document.getElementById(id); if (el) el.value = '' });
   openM('m-inv-prod');
 }
 
@@ -170,6 +177,10 @@ function invAbrirEditarProducto(id) {
   document.getElementById('inv-p-max').value = p.stock_maximo ?? '';
   document.getElementById('inv-p-reorden').value = p.punto_reorden ?? '';
   document.getElementById('inv-p-ubicacion').value = p.ubicacion || '';
+  // Editar un producto existente nunca crea un lote nuevo acá — para eso
+  // está "📦+ Lote" en su fila de la tabla.
+  const wrap = document.getElementById('inv-p-lote-wrap');
+  if (wrap) wrap.style.display = 'none';
   openM('m-inv-prod');
 }
 
@@ -192,12 +203,56 @@ async function invGuardarProducto() {
   });
   if (error) { toast(error, 'err'); return; }
 
+  // Primer lote (opcional, solo al crear): si se llenó número + cantidad,
+  // se valida ACÁ, antes de tocar red, para no crear el producto si el
+  // lote que lo acompaña está mal — mismo criterio que el resto del
+  // proyecto (validar todo antes del primer paso de red).
+  const loteNumero = document.getElementById('inv-p-lote-numero').value;
+  const loteCantidad = document.getElementById('inv-p-lote-cantidad').value;
+  const quiereLote = !id && (loteNumero.trim() || loteCantidad.trim());
+  let loteFila = null, movimientoBase = null;
+  if (quiereLote) {
+    const resLote = invConstruirLote({
+      productoId: 'pendiente', // se reemplaza por el id real una vez creado el producto
+      numeroLote: loteNumero,
+      fechaFabricacion: document.getElementById('inv-p-lote-fabricacion').value,
+      fechaVencimiento: document.getElementById('inv-p-lote-vencimiento').value,
+      cantidadInicial: loteCantidad,
+      costoUnitario: document.getElementById('inv-p-costo').value,
+      proveedor: document.getElementById('inv-p-prov').value,
+    });
+    if (resLote.error) { toast(resLote.error, 'err'); return; }
+    loteFila = resLote.loteFila; movimientoBase = resLote.movimientoBase;
+  }
+
   const btn = document.getElementById('inv-p-save-btn');
   if (btn) { btn.disabled = true; btn.textContent = 'Guardando…' }
   try {
-    if (id) await InventarioRepo.actualizarProducto(id, fila);
-    else await InventarioRepo.crearProducto(fila);
-    toast(id ? 'Producto actualizado ✓' : 'Producto creado ✓', 'ok');
+    if (id) {
+      await InventarioRepo.actualizarProducto(id, fila);
+    } else {
+      const producto = await InventarioRepo.crearProducto(fila);
+      if (quiereLote) {
+        try {
+          loteFila.producto_id = producto.id;
+          const lote = await InventarioRepo.crearLote(loteFila);
+          try {
+            await InventarioRepo.registrarMovimiento({ ...movimientoBase, producto_id: producto.id, lote_id: lote.id });
+          } catch (eMov) {
+            toast(`Producto y lote "${lote.numero_lote}" creados, pero la entrada inicial NO se registró: ${eMov.message}`, 'err');
+            console.warn(eMov);
+            closeM('m-inv-prod'); rInventario();
+            return;
+          }
+        } catch (eLote) {
+          toast(`Producto creado, pero el lote NO se registró: ${eLote.message}`, 'err');
+          console.warn(eLote);
+          closeM('m-inv-prod'); rInventario();
+          return;
+        }
+      }
+    }
+    toast(id ? 'Producto actualizado ✓' : (quiereLote ? 'Producto y primer lote registrados ✓' : 'Producto creado ✓'), 'ok');
     closeM('m-inv-prod');
     rInventario();
   } catch (e) {
@@ -342,6 +397,7 @@ function invAbrirNuevoLote(productoId) {
   document.getElementById('inv-l-producto-id').value = productoId;
   document.getElementById('m-inv-lote-titulo').textContent = `📦 Nuevo lote — ${p.nombre}`;
   document.getElementById('inv-l-numero').value = '';
+  document.getElementById('inv-l-fabricacion').value = '';
   document.getElementById('inv-l-vencimiento').value = '';
   document.getElementById('inv-l-cantidad').value = '';
   document.getElementById('inv-l-costo').value = p.costo_unitario ?? '';
@@ -359,6 +415,7 @@ async function invGuardarLote() {
   const { error, loteFila, movimientoBase } = invConstruirLote({
     productoId,
     numeroLote: document.getElementById('inv-l-numero').value,
+    fechaFabricacion: document.getElementById('inv-l-fabricacion').value,
     fechaVencimiento: document.getElementById('inv-l-vencimiento').value,
     cantidadInicial: document.getElementById('inv-l-cantidad').value,
     costoUnitario: document.getElementById('inv-l-costo').value,

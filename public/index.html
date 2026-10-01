@@ -1314,6 +1314,17 @@ try { if(Object.keys(localStorage).some(k=>k.startsWith('sb-')&&k.includes('auth
         <div class="fi"><label>Stock máximo</label><input type="number" id="inv-p-max" placeholder="Opcional" min="0"></div>
         <div class="fi"><label>Punto de reorden</label><input type="number" id="inv-p-reorden" placeholder="Opcional" min="0"></div>
         <div class="fi"><label>Ubicación</label><input type="text" id="inv-p-ubicacion" placeholder="Ej. Estante 3"></div>
+
+        <div id="inv-p-lote-wrap" style="grid-column:1/-1">
+          <div class="fdiv">Primer lote (opcional)</div>
+          <p style="font-size:11px;color:var(--g500);margin:-4px 0 8px">Si ya sabés el lote de este primer ingreso, completalo acá — si no, dejalo vacío y agregalo después con "📦+ Lote".</p>
+          <div class="fg">
+            <div class="fi"><label>Número de lote</label><input type="text" id="inv-p-lote-numero" placeholder="Ej. A123"></div>
+            <div class="fi"><label>Fecha de fabricación</label><input type="date" id="inv-p-lote-fabricacion"></div>
+            <div class="fi"><label>Fecha de vencimiento</label><input type="date" id="inv-p-lote-vencimiento"></div>
+            <div class="fi"><label>Cantidad inicial</label><input type="number" id="inv-p-lote-cantidad" placeholder="Opcional" min="0" step="any"></div>
+          </div>
+        </div>
       </div>
     </div>
     <div class="mf">
@@ -1362,6 +1373,7 @@ try { if(Object.keys(localStorage).some(k=>k.startsWith('sb-')&&k.includes('auth
       <input type="hidden" id="inv-l-producto-id">
       <div class="fg">
         <div class="fi"><label>Número de lote *</label><input type="text" id="inv-l-numero" placeholder="Ej. A123"></div>
+        <div class="fi"><label>Fecha de fabricación</label><input type="date" id="inv-l-fabricacion"></div>
         <div class="fi"><label>Fecha de vencimiento</label><input type="date" id="inv-l-vencimiento"></div>
         <div class="fi"><label>Cantidad inicial *</label><input type="number" id="inv-l-cantidad" placeholder="0" min="0" step="any"></div>
         <div class="fi"><label>Costo unitario</label><input type="number" id="inv-l-costo" placeholder="Opcional" min="0"></div>

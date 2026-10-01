@@ -102,16 +102,20 @@ function invConstruirMovimiento({ productoId, accion, cantidad, motivo, nota, ci
 // los movimientos"). `loteFila`/`movimientoFila` se insertan en dos pasos
 // desde el repository (el movimiento necesita el id del lote recién
 // creado), pero los dos se validan juntos acá.
-function invConstruirLote({ productoId, numeroLote, fechaVencimiento, cantidadInicial, costoUnitario, proveedor }) {
+function invConstruirLote({ productoId, numeroLote, fechaFabricacion, fechaVencimiento, cantidadInicial, costoUnitario, proveedor }) {
   if (!productoId) return { error: 'Selecciona un producto' };
   if (!numeroLote || !numeroLote.trim()) return { error: 'Escribe el número de lote' };
   const cant = parseFloat(cantidadInicial);
   if (isNaN(cant) || cant <= 0) return { error: 'La cantidad inicial debe ser mayor que cero' };
+  if (fechaFabricacion && fechaVencimiento && fechaFabricacion > fechaVencimiento) {
+    return { error: 'La fecha de fabricación no puede ser posterior al vencimiento' };
+  }
   const costo = costoUnitario === '' || costoUnitario == null ? null : parseFloat(costoUnitario);
   return {
     loteFila: {
       producto_id: productoId,
       numero_lote: numeroLote.trim(),
+      fecha_fabricacion: fechaFabricacion || null,
       fecha_vencimiento: fechaVencimiento || null,
       cantidad_inicial: cant,
       costo_unitario: costo,
