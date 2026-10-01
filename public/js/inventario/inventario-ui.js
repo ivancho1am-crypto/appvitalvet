@@ -154,7 +154,7 @@ async function invDesactivarProducto(id) {
 }
 
 // ── Modal "Registrar movimiento" ───────────────────────────────────────────
-function invAbrirMovimiento(productoIdPreseleccionado) {
+async function invAbrirMovimiento(productoIdPreseleccionado) {
   const sel = document.getElementById('inv-m-prod');
   sel.innerHTML = '<option value="">Selecciona producto</option>' +
     INV_CACHE_PRODUCTOS.map(p => `<option value="${p.id}">${invCategoriaInfo(p.categoria).icon} ${p.nombre}</option>`).join('');
@@ -164,6 +164,25 @@ function invAbrirMovimiento(productoIdPreseleccionado) {
   document.getElementById('inv-m-motivo').value = 'compra';
   document.getElementById('inv-m-nota').value = '';
   openM('m-inv-mov');
+  _invCargarCitasDelSelect();   // no bloquea el modal: corre después de abrirlo
+}
+
+// Opcional, no crítico: si falla o Agenda no está cargada, el select queda
+// en "Ninguna" y el formulario sigue funcionando exactamente igual.
+async function _invCargarCitasDelSelect() {
+  const sel = document.getElementById('inv-m-cita'); if (!sel) return;
+  sel.innerHTML = '<option value="">Ninguna</option>';
+  if (typeof AgendaRepo === 'undefined') return;
+  try {
+    const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+    const desde = new Date(hoy); desde.setDate(desde.getDate() - 2);
+    const hasta = new Date(hoy); hasta.setDate(hasta.getDate() + 3); hasta.setHours(23, 59, 59, 999);
+    const citas = await AgendaRepo.listar(desde.toISOString(), hasta.toISOString());
+    sel.innerHTML += citas.map(c => {
+      const hora = new Date(c.fecha_hora).toLocaleString('es-CO', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+      return `<option value="${c.id}">${hora} — ${c.mascota_nombre || 'Sin nombre'}</option>`;
+    }).join('');
+  } catch (e) { console.warn('[inventario] _invCargarCitasDelSelect:', e); }
 }
 
 async function invGuardarMovimiento() {
@@ -173,6 +192,7 @@ async function invGuardarMovimiento() {
     cantidad: document.getElementById('inv-m-cant').value,
     motivo: document.getElementById('inv-m-motivo').value,
     nota: document.getElementById('inv-m-nota').value,
+    citaId: document.getElementById('inv-m-cita').value,
   });
   if (error) { toast(error, 'err'); return; }
 

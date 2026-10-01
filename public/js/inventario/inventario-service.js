@@ -51,7 +51,7 @@ function invConstruirProducto({ nombre, categoria, unidad, stockMinimo, costo, p
 // Valida y arma la fila de un movimiento. `accion` decide el signo de
 // `cantidad`: así el formulario siempre pide un número positivo y nunca hay
 // que explicarle al usuario que "para salida escribe negativo".
-function invConstruirMovimiento({ productoId, accion, cantidad, motivo, nota }) {
+function invConstruirMovimiento({ productoId, accion, cantidad, motivo, nota, citaId }) {
   if (!productoId) return { error: 'Selecciona un producto' };
   if (accion !== 'entrada' && accion !== 'salida') return { error: 'Selecciona entrada o salida' };
   const cant = parseFloat(cantidad);
@@ -62,6 +62,10 @@ function invConstruirMovimiento({ productoId, accion, cantidad, motivo, nota }) 
       producto_id: productoId,
       cantidad: accion === 'entrada' ? cant : -cant,
       motivo,
+      // Opcional: si el movimiento corresponde a una cita puntual (ej. se usó
+      // una vacuna durante esa consulta), queda enlazado — sin tocar historia
+      // clínica ni vv_store, solo una referencia de contexto en inventario.
+      cita_id: citaId || null,
       nota: (nota || '').trim() || null,
     }
   };
