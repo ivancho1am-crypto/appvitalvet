@@ -46,6 +46,9 @@ function agConstruirFila({ mascotaId, servicio, fechaHora, duracion, motivo, pac
   const prop = DB.get('props').find(p => p.id === mas.pid);
 
   return {
+    // Ojo: `fila` nunca incluye `estado` a propósito — así, sea cual sea el
+    // default real de esa columna en Supabase (cambió más de una vez durante
+    // el desarrollo), esta función no lo pisa ni necesita saberlo.
     fila: {
       paciente_id: pacienteId || null, tutor_id: tutorId || null,
       mascota_nombre: mas.nombre, mascota_especie: mas.esp,
