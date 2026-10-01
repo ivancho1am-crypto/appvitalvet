@@ -89,7 +89,7 @@ function _finRenderFacturas(facturas, resumenFacturas) {
   }
   const resumenPorId = {}; resumenFacturas.forEach(r => { resumenPorId[r.factura_id] = r });
   cont.innerHTML = `<div class="tw"><table>
-    <thead><tr><th>Número</th><th>Fecha</th><th>Facturado</th><th>Cobrado</th><th>Por cobrar</th><th>Estado</th></tr></thead>
+    <thead><tr><th>Número</th><th>Fecha</th><th>Facturado</th><th>Cobrado</th><th>Por cobrar</th><th>Estado</th><th>Acciones</th></tr></thead>
     <tbody>${facturas.map(f => {
       const r = resumenPorId[f.id];
       // Si la vista todavía no trae esta factura (debería ser rarísimo, pero
@@ -103,6 +103,10 @@ function _finRenderFacturas(facturas, resumenFacturas) {
         <td>${fmt$(cobrado)}</td>
         <td><span class="badge ${saldo > 0 ? 'bg-yellow' : 'bg-green'}">${fmt$(saldo)}</span></td>
         <td><span class="badge bg-gray">${f.estado || 'emitida'}</span></td>
+        <td style="white-space:nowrap">
+          ${saldo > 0 ? `<button class="btn btn-outline btn-xs" onclick="finAbrirPago('${f.id}',${saldo})">💰 Pago</button>` : ''}
+          <button class="btn btn-outline btn-xs" onclick="finVerPagos('${f.id}','${f.numero || ''}')">🕓</button>
+        </td>
       </tr>`;
     }).join('')}</tbody>
   </table></div>`;
@@ -196,4 +200,95 @@ async function finAnularGasto(id) {
     toast('Gasto anulado ✓', 'ok');
     rFinanzas();
   } catch (e) { toast('No se pudo anular el gasto', 'err'); console.warn(e); }
+}
+
+// ── Modal "Registrar pago" (Ciclo 4) ───────────────────────────────────────
+// `facturaId`/`saldoPendiente` vienen del botón de la fila (ver
+// _finRenderFacturas) — el monto se prellena con el saldo completo, el caso
+// más común (pago total), pero queda editable para pagos parciales.
+async function finAbrirPago(facturaId, saldoPendiente) {
+  document.getElementById('fin-pago-factura-id').value = facturaId;
+  document.getElementById('fin-pago-saldo').value = saldoPendiente;
+  document.getElementById('fin-p-monto').value = saldoPendiente;
+  document.getElementById('fin-p-metodo').value = 'efectivo';
+  document.getElementById('fin-p-referencia').value = '';
+  document.getElementById('fin-p-nota').value = '';
+  const hoy = new Date();
+  document.getElementById('fin-p-fecha').value =
+    `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}-${String(hoy.getDate()).padStart(2, '0')}T${String(hoy.getHours()).padStart(2, '0')}:${String(hoy.getMinutes()).padStart(2, '0')}`;
+
+  const sel = document.getElementById('fin-p-cuenta');
+  sel.innerHTML = '<option value="">Cargando cuentas…</option>';
+  openM('m-fin-pago');
+  try {
+    const cuentas = await FinanzasRepo.listarCuentas();
+    sel.innerHTML = cuentas.length
+      ? '<option value="">Selecciona cuenta</option>' + cuentas.map(c => `<option value="${c.id}">${c.nombre} (${c.tipo})</option>`).join('')
+      : '<option value="">Sin cuentas creadas todavía</option>';
+  } catch (e) {
+    sel.innerHTML = '<option value="">No se pudieron cargar las cuentas</option>';
+    console.warn('[finanzas] listarCuentas:', e);
+  }
+}
+
+async function finGuardarPago() {
+  const facturaId = document.getElementById('fin-pago-factura-id').value;
+  const saldoPendiente = parseFloat(document.getElementById('fin-pago-saldo').value) || 0;
+  const { error, fila } = finConstruirPago({
+    facturaId,
+    cuentaId: document.getElementById('fin-p-cuenta').value,
+    monto: document.getElementById('fin-p-monto').value,
+    metodo: document.getElementById('fin-p-metodo').value,
+    fecha: document.getElementById('fin-p-fecha').value,
+    referencia: document.getElementById('fin-p-referencia').value,
+    nota: document.getElementById('fin-p-nota').value,
+    saldoPendiente,
+  });
+  if (error) { toast(error, 'err'); return; }
+
+  const btn = document.getElementById('fin-p-save-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Guardando…' }
+  try {
+    await FinanzasRepo.crearPago(fila);
+    toast('Pago registrado ✓', 'ok');
+    closeM('m-fin-pago');
+    rFinanzas();   // cobrado/por_cobrar salen solos al releer las vistas
+  } catch (e) {
+    toast('No se pudo registrar el pago', 'err'); console.warn(e);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '💾 Registrar pago' }
+  }
+}
+
+// ── Modal "Historial de pagos" de una factura (solo lectura) ──────────────
+async function finVerPagos(facturaId, numero) {
+  document.getElementById('m-fin-pagos-titulo').textContent = `🕓 Pagos — ${numero || 'factura'}`;
+  const cont = document.getElementById('fin-pagos-lista');
+  cont.innerHTML = '<div class="empty-s">Cargando…</div>';
+  openM('m-fin-pagos');
+  let pagos;
+  try { pagos = await FinanzasRepo.pagosDeFactura(facturaId); }
+  catch (e) { cont.innerHTML = '<div class="empty-s">No se pudo cargar el historial</div>'; console.warn(e); return; }
+  if (!pagos.length) { cont.innerHTML = '<div class="empty-s">Sin pagos registrados todavía</div>'; return; }
+  cont.innerHTML = pagos.map(p => `
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--g200)${p.anulado ? ';opacity:.5' : ''}">
+      <div>
+        <div style="font-size:12px">${FIN_METODOS_PAGO[p.metodo] || p.metodo}${p.referencia ? ' — ' + p.referencia : ''}${p.anulado ? ' (ANULADO)' : ''}</div>
+        <div style="font-size:11px;color:var(--g500)">${new Date(p.fecha).toLocaleString('es-CO')}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span class="badge bg-green">${fmt$(p.monto)}</span>
+        ${!p.anulado ? `<button class="btn btn-outline btn-xs" onclick="finAnularPago('${p.id}','${facturaId}','${(numero || '').replace(/'/g, "\\'")}')">🚫</button>` : ''}
+      </div>
+    </div>`).join('');
+}
+
+async function finAnularPago(id, facturaId, numero) {
+  if (!confirm('¿Anular este pago? El saldo pendiente de la factura vuelve a subir.')) return;
+  try {
+    await FinanzasRepo.anularPago(id);
+    toast('Pago anulado ✓', 'ok');
+    finVerPagos(facturaId, numero);   // refresca el historial abierto
+    rFinanzas();                      // y los KPIs/tabla de atrás
+  } catch (e) { toast('No se pudo anular el pago', 'err'); console.warn(e); }
 }

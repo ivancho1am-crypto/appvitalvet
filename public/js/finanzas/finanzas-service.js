@@ -78,3 +78,35 @@ function finSumarResumenFacturas(filas) {
 function finSumarGastos(gastos) {
   return gastos.reduce((s, g) => s + (parseFloat(g.monto) || 0), 0);
 }
+
+// ── Pagos (Ciclo 4) ──────────────────────────────────────────────────────
+const FIN_METODOS_PAGO = {
+  efectivo: 'Efectivo', transferencia: 'Transferencia', tarjeta: 'Tarjeta', otro: 'Otro',
+};
+
+// Valida y arma la fila de un pago. `saldoPendiente` viene de
+// finanzas_resumen_facturas (resuelto en finanzas-ui.js) — nunca se deja
+// registrar un pago mayor al saldo real de la factura, para que "por
+// cobrar" nunca se vuelva negativo por error de tipeo.
+function finConstruirPago({ facturaId, cuentaId, monto, metodo, fecha, referencia, nota, saldoPendiente }) {
+  if (!facturaId) return { error: 'Factura no encontrada' };
+  if (!cuentaId) return { error: 'Selecciona una cuenta (caja/banco)' };
+  const m = parseFloat(monto);
+  if (isNaN(m) || m <= 0) return { error: 'El monto debe ser mayor que cero' };
+  if (typeof saldoPendiente === 'number' && m > saldoPendiente + 0.01) {
+    return { error: `El monto no puede superar el saldo pendiente (${saldoPendiente})` };
+  }
+  if (!metodo || !FIN_METODOS_PAGO[metodo]) return { error: 'Selecciona un método de pago' };
+  if (!fecha) return { error: 'Selecciona fecha y hora' };
+  return {
+    fila: {
+      factura_id: facturaId,
+      cuenta_id: cuentaId,
+      monto: m,
+      metodo,
+      fecha: new Date(fecha).toISOString(),
+      referencia: (referencia || '').trim() || null,
+      nota: (nota || '').trim() || null,
+    }
+  };
+}

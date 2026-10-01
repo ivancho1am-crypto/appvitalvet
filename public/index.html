@@ -1321,6 +1321,44 @@ try { if(Object.keys(localStorage).some(k=>k.startsWith('sb-')&&k.includes('auth
   </div>
 </div>
 
+<!-- REGISTRAR PAGO (Finanzas — Ciclo 4) -->
+<div class="mo" id="m-fin-pago">
+  <div class="md">
+    <div class="mh"><div class="mt">💰 Registrar pago</div><button class="mx" onclick="closeM('m-fin-pago')">✕</button></div>
+    <div class="mb">
+      <input type="hidden" id="fin-pago-factura-id">
+      <input type="hidden" id="fin-pago-saldo">
+      <div class="fg">
+        <div class="fi ff"><label>Cuenta (caja/banco) *</label><select id="fin-p-cuenta"></select></div>
+        <div class="fi"><label>Monto *</label><input type="number" id="fin-p-monto" placeholder="0" min="0"></div>
+        <div class="fi"><label>Método *</label>
+          <select id="fin-p-metodo">
+            <option value="efectivo">Efectivo</option>
+            <option value="transferencia">Transferencia</option>
+            <option value="tarjeta">Tarjeta</option>
+            <option value="otro">Otro</option>
+          </select></div>
+        <div class="fi ff"><label>Fecha y hora *</label><input type="datetime-local" id="fin-p-fecha"></div>
+        <div class="fi"><label>Referencia</label><input type="text" id="fin-p-referencia" placeholder="Opcional — ej. # de transferencia"></div>
+        <div class="fi ff"><label>Nota</label><textarea id="fin-p-nota" placeholder="Opcional" style="min-height:45px"></textarea></div>
+      </div>
+    </div>
+    <div class="mf">
+      <button class="btn btn-outline" onclick="closeM('m-fin-pago')">Cancelar</button>
+      <button class="btn btn-green" id="fin-p-save-btn" onclick="finGuardarPago()">💾 Registrar pago</button>
+    </div>
+  </div>
+</div>
+
+<!-- HISTORIAL DE PAGOS de una factura (Finanzas — Ciclo 4, solo lectura) -->
+<div class="mo" id="m-fin-pagos">
+  <div class="md">
+    <div class="mh"><div class="mt" id="m-fin-pagos-titulo">🕓 Pagos</div><button class="mx" onclick="closeM('m-fin-pagos')">✕</button></div>
+    <div class="mb"><div id="fin-pagos-lista"></div></div>
+    <div class="mf"><button class="btn btn-outline" onclick="closeM('m-fin-pagos')">Cerrar</button></div>
+  </div>
+</div>
+
 <!-- PROCEDIMIENTO -->
 <div class="mo" id="m-proc">
   <div class="md">
