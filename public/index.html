@@ -1010,15 +1010,20 @@ try { if(Object.keys(localStorage).some(k=>k.startsWith('sb-')&&k.includes('auth
       </div>
       <div style="font-size:11px;color:var(--g500);margin-bottom:10px" id="fin-rango-actual"></div>
 
+      <!-- 4 indicadores separados a propósito: facturar no es lo mismo que
+           cobrar. "Facturado" nunca se muestra como "Ingresos". -->
       <div class="kpi-row">
+        <div class="kpi-card" style="--c:var(--blue)">
+          <div class="kc-ic">🧾</div><div class="kc-val" id="fin-kpi-facturado">$ 0</div><div class="kc-lbl">Facturado</div>
+        </div>
         <div class="kpi-card" style="--c:var(--green)">
-          <div class="kc-ic">📈</div><div class="kc-val" id="fin-kpi-ingresos">$ 0</div><div class="kc-lbl">Ingresos (facturado)</div>
+          <div class="kc-ic">💵</div><div class="kc-val" id="fin-kpi-cobrado">$ 0</div><div class="kc-lbl">Cobrado</div>
+        </div>
+        <div class="kpi-card" style="--c:#d97706">
+          <div class="kc-ic">⏳</div><div class="kc-val" id="fin-kpi-porcobrar">$ 0</div><div class="kc-lbl">Por cobrar</div>
         </div>
         <div class="kpi-card" style="--c:#dc2626">
           <div class="kc-ic">📉</div><div class="kc-val" id="fin-kpi-gastos">$ 0</div><div class="kc-lbl">Gastos</div>
-        </div>
-        <div class="kpi-card" id="fin-kpi-balance-card" style="--c:var(--brand)">
-          <div class="kc-ic">⚖️</div><div class="kc-val" id="fin-kpi-balance">$ 0</div><div class="kc-lbl">Balance</div>
         </div>
       </div>
 

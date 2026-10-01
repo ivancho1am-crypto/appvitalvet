@@ -55,10 +55,26 @@ function finConstruirGasto({ categoria, monto, descripcion, fecha, productoId })
   };
 }
 
-// El balance nunca se guarda: siempre se calcula a partir de lo que ya se
-// leyó de `facturas` y `gastos` — mismo criterio que el stock de Inventario.
-function finCalcularResumen(facturas, gastos) {
-  const ingresos = facturas.reduce((s, f) => s + (parseFloat(f.total) || 0), 0);
-  const totalGastos = gastos.reduce((s, g) => s + (parseFloat(g.monto) || 0), 0);
-  return { ingresos, gastos: totalGastos, balance: ingresos - totalGastos };
+// 'YYYY-MM-01' del mes de la fecha dada (o de hoy) — para consultar
+// finanzas_resumen_mensual, que guarda `mes` truncado al primer día.
+function finPrimerDiaMes(fecha) {
+  const d = fecha ? new Date(fecha) : new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`;
+}
+
+// Suma FACTURADO/COBRADO/POR COBRAR de varias filas de
+// finanzas_resumen_facturas (fallback cuando no hay fila en el resumen
+// mensual, o para los rangos Hoy/Últimos 7 días, que no son un mes completo).
+// Nunca se interpreta facturas.total como dinero cobrado — "cobrado" y
+// "saldo_pendiente" salen siempre de la vista, nunca de un cálculo propio.
+function finSumarResumenFacturas(filas) {
+  return filas.reduce((acc, f) => ({
+    facturado: acc.facturado + (parseFloat(f.facturado) || 0),
+    cobrado:   acc.cobrado   + (parseFloat(f.cobrado) || 0),
+    porCobrar: acc.porCobrar + (parseFloat(f.saldo_pendiente) || 0),
+  }), { facturado: 0, cobrado: 0, porCobrar: 0 });
+}
+
+function finSumarGastos(gastos) {
+  return gastos.reduce((s, g) => s + (parseFloat(g.monto) || 0), 0);
 }
