@@ -27,6 +27,10 @@ function go(page, btn) {
   // Marketing: sin red, se recalcula al entrar igual que los demás —
   // acá el "recalcular" es puramente local (DB.get), nunca Supabase.
   if (page === 'marketing' && typeof rMarketing === 'function') rMarketing();
+  // En celular el menú es un cajón que tapa el contenido: al elegir una
+  // pestaña se cierra solo. En PC no hace nada. Va al final, después de que
+  // la página ya se pintó.
+  if (typeof cerrarSidebarMovil === 'function') cerrarSidebarMovil();
 }
 
 function boot() {

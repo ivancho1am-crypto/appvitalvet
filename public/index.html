@@ -129,6 +129,10 @@ try { if(Object.keys(localStorage).some(k=>k.startsWith('sb-')&&k.includes('auth
 <div class="app-shell">
 
   <!-- SIDEBAR -->
+  <!-- Fondo oscuro del cajón en celular: tocarlo cierra el menú. Invisible y
+       sin capturar clics en PC/tablet (ver styles.css). -->
+  <div class="sidebar-backdrop" id="sidebar-backdrop" onclick="cerrarSidebarMovil()"></div>
+
   <aside class="sidebar" id="app-sidebar">
     <div class="sidebar-brand">
       <div class="sidebar-brand-ic">🐾</div>
@@ -213,6 +217,10 @@ try { if(Object.keys(localStorage).some(k=>k.startsWith('sb-')&&k.includes('auth
 
     <!-- TOPBAR NUEVA — conserva Sincronizar tal cual (DB.loadAll()+boot()) -->
     <div class="app-topbar">
+      <!-- Menú en celular: el botón "◀" del sidebar queda fuera de pantalla
+           cuando el cajón está cerrado, así que sin esto no había NINGUNA forma
+           de navegar desde el teléfono. Oculto en PC/tablet (ver styles.css). -->
+      <button class="tb-menu" onclick="toggleSidebar()" aria-label="Abrir menú">☰</button>
       <div class="app-search">
         <span class="app-search-ic">🔍</span>
         <input type="text" id="global-search" placeholder="Buscar propietario o mascota..."
@@ -258,7 +266,7 @@ try { if(Object.keys(localStorage).some(k=>k.startsWith('sb-')&&k.includes('auth
         </div>
 
         <!-- Acciones rápidas + financiero -->
-        <div class="dash-cols-2" style="grid-template-columns:2.2fr 1fr">
+        <div class="dash-cols-2 vv-movil-1col" style="grid-template-columns:2.2fr 1fr">
           <div class="quick-actions">
             <button class="qa-btn" onclick="openM('m-prop')"><div class="qa-ic">👤</div><div class="qa-lbl">Nuevo propietario</div></button>
             <button class="qa-btn" onclick="openM('m-mas')"><div class="qa-ic">🐾</div><div class="qa-lbl">Nueva mascota</div></button>
@@ -356,7 +364,7 @@ try { if(Object.keys(localStorage).some(k=>k.startsWith('sb-')&&k.includes('auth
         </div>
         <button class="btn btn-green" onclick="openM('m-prop')">+ Nuevo propietario</button>
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px">
+      <div class="vv-movil-1col" style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px">
         <div class="card">
           <div class="card-hdr"><div class="card-title">🔍 Buscar propietario</div></div>
           <div class="card-body">
@@ -370,7 +378,7 @@ try { if(Object.keys(localStorage).some(k=>k.startsWith('sb-')&&k.includes('auth
         <div class="card">
           <div class="card-hdr"><div class="card-title">📊 Resumen</div></div>
           <div class="card-body">
-            <div class="stats-row" style="grid-template-columns:1fr 1fr;gap:10px;margin:0">
+            <div class="stats-row vv-movil-1col" style="grid-template-columns:1fr 1fr;gap:10px;margin:0">
               <div class="stat s1"><div class="stat-ic">👥</div><div class="stat-val" id="cnt-p">0</div><div class="stat-lbl">Propietarios</div></div>
               <div class="stat s2"><div class="stat-ic">🐾</div><div class="stat-val" id="cnt-m">0</div><div class="stat-lbl">Mascotas</div></div>
             </div>
@@ -508,7 +516,7 @@ try { if(Object.keys(localStorage).some(k=>k.startsWith('sb-')&&k.includes('auth
     <!-- ══ RECORDATORIOS ══ -->
     <div class="page" id="page-recordatorios">
       <div class="sec-hdr"><div class="sec-title">🔔 Recordatorios y Agenda</div></div>
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:18px">
+      <div class="vv-movil-1col" style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:18px">
         <div class="card">
           <div class="card-hdr"><div class="card-title">💉 Próximas vacunas</div></div>
           <div class="card-body" id="rec-vac"></div>
@@ -537,7 +545,7 @@ try { if(Object.keys(localStorage).some(k=>k.startsWith('sb-')&&k.includes('auth
           <button class="btn btn-outline btn-sm" style="color:#ef5350;border-color:#ef5350" onclick="borrarCotizacion()">🗑 Borrar</button>
         </div>
       </div>
-      <div style="display:grid;grid-template-columns:300px 1fr;gap:18px;align-items:start">
+      <div class="vv-movil-1col" style="display:grid;grid-template-columns:300px 1fr;gap:18px;align-items:start">
         <div>
           <div class="card" style="margin-bottom:12px">
             <div class="card-hdr"><div class="card-title">👤 Paciente</div></div>
@@ -654,7 +662,7 @@ try { if(Object.keys(localStorage).some(k=>k.startsWith('sb-')&&k.includes('auth
         <div class="stat s3"><div class="stat-ic">📋</div><div class="stat-val" id="i-h">0</div><div class="stat-lbl">Registros clínicos</div></div>
         <div class="stat s4"><div class="stat-ic">🏥</div><div class="stat-val" id="i-s">0</div><div class="stat-lbl">En seguimiento</div></div>
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+      <div class="vv-movil-1col" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
         <div class="card">
           <div class="card-hdr"><div class="card-title">🐾 Por especie</div></div>
           <div class="card-body" id="rep-esp"></div>
@@ -1015,7 +1023,7 @@ try { if(Object.keys(localStorage).some(k=>k.startsWith('sb-')&&k.includes('auth
         </div>
       </div>
 
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+      <div class="vv-movil-1col" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
         <div class="card">
           <div class="card-hdr"><div class="card-title">⚠️ Bajo stock</div></div>
           <div class="card-body" id="inv-alerta"></div>
@@ -1119,7 +1127,7 @@ try { if(Object.keys(localStorage).some(k=>k.startsWith('sb-')&&k.includes('auth
       <div class="sec-hdr">
         <div><div class="sec-title">📣 Marketing</div></div>
       </div>
-      <div style="display:grid;grid-template-columns:260px 1fr;gap:16px;align-items:start">
+      <div class="vv-movil-1col" style="display:grid;grid-template-columns:260px 1fr;gap:16px;align-items:start">
 
         <!-- Panel izquierdo: Segmentación -->
         <div class="card">

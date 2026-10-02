@@ -532,3 +532,105 @@ tr:hover td{background:var(--g100)}
   .app-search{max-width:none}
   .kpi-row{grid-template-columns:1fr 1fr}
 }
+
+/* ══════════════════════════════════════════════════════════════════════
+   CELULAR — capa añadida 2026-10-02
+   TODO lo de acá vive dentro de @media(max-width:768px): en PC y tablet
+   no cambia ni un píxel. Se agregó porque en teléfono el panel era
+   inusable: el sidebar queda fuera de pantalla y su botón "◀" con él,
+   así que no había forma de navegar. Medido, no supuesto — sólo
+   Cotizaciones (639px), Marketing (906px) y Estadísticas (425px)
+   desbordaban los 390px de un teléfono; el resto ya estaba bien.
+   ══════════════════════════════════════════════════════════════════════ */
+
+/* Un hijo de grilla NO baja del ancho mínimo de su contenido salvo que se le
+   diga. Sin esto, la tabla de 7 columnas de Marketing estira su columna y
+   desborda la pantalla: medido, pasaba igual ANTES de esta capa de celular
+   (16 elementos fuera de pantalla en un portátil de 1025px, idéntico en el
+   código anterior). Con min-width:0 la columna se encoge y el scroll
+   horizontal lo hace .tw dentro de la tarjeta, que es lo correcto.
+   Acotado a los 8 contenedores marcados: no toca ninguna otra grilla. */
+.vv-movil-1col,.vv-movil-1col>*{min-width:0}
+.vv-movil-1col .tw{max-width:100%}
+
+/* Botón ☰ de la topbar: sólo existe en celular. */
+.tb-menu{display:none}
+
+/* Fondo del cajón: presente siempre en el DOM, pero inerte fuera de celular. */
+.sidebar-backdrop{display:none}
+
+@media(max-width:768px){
+  /* ── Navegación ──────────────────────────────────────────────────── */
+  .tb-menu{
+    display:flex;align-items:center;justify-content:center;
+    width:40px;height:40px;flex:0 0 40px;
+    border:none;border-radius:10px;cursor:pointer;
+    background:var(--brand-dark);color:#fff;font-size:18px;line-height:1;
+  }
+  .sidebar-backdrop{
+    display:block;position:fixed;inset:0;z-index:98;
+    background:rgba(9,44,59,.45);
+    opacity:0;pointer-events:none;transition:opacity .2s ease;
+  }
+  .sidebar-backdrop.on{opacity:1;pointer-events:auto}
+  .sidebar{z-index:99}
+
+  /* ── Grillas de 2-3 columnas → una sola ──────────────────────────────
+     !important porque estos contenedores traen grid-template-columns en
+     el atributo style= del HTML, que de otro modo le gana a la media
+     query (es lo que tenía roto Cotizaciones y Marketing: la clase
+     responsive existía, el inline la anulaba). */
+
+  /* ── Topbar: que quepa y no empuje ─────────────────────────────────
+     height:58px es FIJO en la regla base. Al envolver, la segunda fila
+     (el buscador) se salía de esa caja y quedaba encima del contenido:
+     el título de cada página aparecía cortado por detrás. Con height:auto
+     la barra crece a dos filas y el contenido empieza donde debe. */
+  .app-topbar{flex-wrap:wrap;gap:8px;padding:10px 12px;height:auto}
+  .app-search{order:3;flex:1 1 100%;max-width:none}
+  .tb-badge{font-size:10px;padding:4px 8px}
+  .tb-logout{font-size:11px;padding:7px 10px}
+  .tb-uname{display:none}            /* el avatar "ID" ya identifica la sesión */
+
+  /* ── Estadísticas: las píldoras se salían 35px ───────────────────── */
+  .stat-pill{flex-wrap:wrap;max-width:100%}
+  .stat-lbl{white-space:normal;word-break:break-word}
+
+  /* ── Modales: aire a los lados y botones que no se desbordan ─────── */
+  .md,.md-lg{max-width:calc(100vw - 24px)}
+  .mf{flex-wrap:wrap}
+  .mf .btn{flex:1 1 auto}
+
+  /* ── Tablas: ya tenían overflow-x; se les da pista de scroll táctil ─ */
+  .tw{-webkit-overflow-scrolling:touch}
+
+  /* ── Objetivos de toque algo más generosos ──────────────────────── */
+  .btn-xs,.btn-sm{min-height:32px}
+}
+
+/* Pantallas muy angostas (≤380px): sólo apretar un poco más. */
+@media(max-width:380px){
+  .main-content{padding:10px}
+  .kpi-row{grid-template-columns:1fr}
+}
+
+/* ── TABLET + CELULAR (≤1024px) ───────────────────────────────────────
+   Estos desbordes NO los introdujo la capa de celular: medido contra el
+   código anterior, en tablet de 820px ya se salían 34 elementos
+   (Cotizaciones 14, Marketing 18, Estadísticas 2 — scroll de 1156px
+   sobre 820). El sidebar ocupa 240px fijos, así que al contenido le
+   quedan ~556px y una grilla de "300px 1fr" o "260px 1fr" no cabe.
+   Se apilan desde 1024px, que es el mismo corte que ya usaba
+   .dash-cols-2 más arriba (misma intención de diseño, ahora efectiva:
+   antes el style= en línea le ganaba a la media query). */
+@media(max-width:1024px){
+  .vv-movil-1col{grid-template-columns:1fr !important}
+
+  /* El ranking de Estadísticas traía min-width:130px fijo en .rank-name. */
+  .vv-stats .rank-name{min-width:0}
+  .vv-stats .rank-item{flex-wrap:wrap}
+
+  /* Las píldoras de Estadísticas también se salían en tablet (851 sobre 820). */
+  .stat-pill{flex-wrap:wrap;max-width:100%}
+  .stat-lbl{white-space:normal;word-break:break-word}
+}

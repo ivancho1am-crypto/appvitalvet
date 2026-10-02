@@ -181,9 +181,26 @@ function rDashboard() {
 function toggleSidebar() {
   const sb = document.getElementById('app-sidebar');
   if (!sb) return;
-  if (window.innerWidth <= 768) { sb.classList.toggle('mobile-open'); return; }
+  if (window.innerWidth <= 768) {
+    // En celular es un cajón: se abre encima del contenido, con fondo oscuro
+    // detrás para que se entienda que hay que cerrarlo (o tocar afuera).
+    const abierto = sb.classList.toggle('mobile-open');
+    const fondo = document.getElementById('sidebar-backdrop');
+    if (fondo) fondo.classList.toggle('on', abierto);
+    return;
+  }
   sb.classList.toggle('collapsed');
   try { localStorage.setItem('vv_sidebar_collapsed', sb.classList.contains('collapsed') ? '1' : '0'); } catch (e) {}
+}
+
+// Cierra el cajón en celular. La llama el fondo oscuro al tocarlo y go() al
+// cambiar de pestaña — si no, el menú queda tapando la página recién abierta.
+// En PC no hace nada (no hay cajón que cerrar).
+function cerrarSidebarMovil() {
+  const sb = document.getElementById('app-sidebar');
+  if (sb) sb.classList.remove('mobile-open');
+  const fondo = document.getElementById('sidebar-backdrop');
+  if (fondo) fondo.classList.remove('on');
 }
 (function () {
   try {
