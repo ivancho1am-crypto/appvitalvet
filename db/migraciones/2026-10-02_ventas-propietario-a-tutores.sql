@@ -1,5 +1,11 @@
 -- Ventas — arreglar la venta a propietario registrado.
 --
+-- ⚠️ NO EJECUTAR: ya fue aplicada en Supabase de producción el 2026-10-02.
+-- Verificado por lectura del esquema ese mismo día: ventas.propietario_id
+-- apunta ahora a `tutores.id`. Este archivo queda como registro para
+-- mantener la trazabilidad Git ↔ Supabase (deuda técnica #1, ver
+-- docs/deuda-tecnica.md y docs/auditoria-supabase-git-2026-10-01.md).
+--
 -- EL PROBLEMA (diagnosticado el 2026-10-02):
 -- `ventas.propietario_id` es uuid con FK a `propietarios(id)`, pero esa tabla
 -- quedó VACÍA (0 filas) cuando se migró el modelo relacional a
