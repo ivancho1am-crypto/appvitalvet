@@ -330,6 +330,20 @@ try { if(Object.keys(localStorage).some(k=>k.startsWith('sb-')&&k.includes('auth
           <button class="widget-link" style="font-size:12px" onclick="go('estadisticas',document.querySelector('.sidebar-item[onclick*=estadisticas]'))">📈 Ver estadísticas completas →</button>
         </div>
 
+        <!-- Espejo relacional: cada guardado del panel debe llegar también a
+             tutores/pacientes/historia_clinica (las tablas que usan el portal
+             de tutores y los reportes SQL). Acá se ve si alguno se quedó atrás
+             y se puede reenviar. Ver js/espejo-verificar.js -->
+        <div class="card">
+          <div class="card-hdr">
+            <div class="card-title">🔗 Espejo relacional</div>
+            <button class="btn btn-outline btn-xs" id="espejo-btn-verificar" onclick="espejoVerificarDesdeUI()">🔍 Verificar ahora</button>
+          </div>
+          <div class="card-body" id="espejo-estado">
+            <p style="font-size:12px;color:var(--g500)">Comprueba que todo lo guardado en el panel esté también en las tablas relacionales.</p>
+          </div>
+        </div>
+
       </div>
     </div>
 
@@ -1727,6 +1741,9 @@ VitalVet 🐾</textarea>
 <script src="/js/config.js"></script>
 <script src="/js/db.js"></script>
 <script src="/js/espejo.js"></script>
+<!-- Verificación/reparación del espejo: va DESPUÉS de espejo.js porque reusa
+     sus funciones (espejoProp/espejoMas/espejoHist) para reparar. -->
+<script src="/js/espejo-verificar.js"></script>
 <script src="/js/borrado.js"></script>
 <script src="/js/seed.js"></script>
 <script src="/js/helpers.js"></script>

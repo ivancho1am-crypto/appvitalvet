@@ -168,6 +168,12 @@ function rDashboard() {
   _rRecientes(mas, props);
   _rActividad(props, mas, hist, DB.get('segs'));
   _rEspecies(mas);
+
+  // Espejo relacional: chequeo silencioso una sola vez por sesión, y
+  // desprendido (setTimeout dentro) — no puede retrasar ni romper este
+  // render ni el arranque. Solo avisa si algo quedó sin llegar a las tablas;
+  // reparar siempre lo decide la persona. Ver js/espejo-verificar.js.
+  if (typeof espejoChequeoSilencioso === 'function') espejoChequeoSilencioso();
 }
 
 // ── Sidebar: colapsar/expandir (desktop) y drawer (móvil) ─────────────────
