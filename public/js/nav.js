@@ -24,6 +24,9 @@ function go(page, btn) {
   if (page === 'finanzas' && typeof rFinanzas === 'function') rFinanzas();
   // Ventas: igual que los demás, se recalcula al entrar.
   if (page === 'ventas' && typeof rVentas === 'function') rVentas();
+  // Marketing: sin red, se recalcula al entrar igual que los demás —
+  // acá el "recalcular" es puramente local (DB.get), nunca Supabase.
+  if (page === 'marketing' && typeof rMarketing === 'function') rMarketing();
 }
 
 function boot() {

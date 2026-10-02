@@ -184,6 +184,9 @@ try { if(Object.keys(localStorage).some(k=>k.startsWith('sb-')&&k.includes('auth
       <button class="tab-btn sidebar-item" data-module-status="existing" onclick="go('ventas',this)">
         <span class="si-ico">🛒</span><span>Ventas</span>
       </button>
+      <button class="tab-btn sidebar-item" data-module-status="existing" onclick="go('marketing',this)">
+        <span class="si-ico">📣</span><span>Marketing</span>
+      </button>
 
       <div class="sidebar-section">Próximamente</div>
       <!-- Solo interfaz: sin onclick, sin rutas, sin funciones. Ninguno de estos
@@ -192,7 +195,6 @@ try { if(Object.keys(localStorage).some(k=>k.startsWith('sb-')&&k.includes('auth
       <button class="sidebar-item module-coming-soon" data-module-status="new" disabled><span class="si-ico">🔪</span><span>Cirugía</span><span class="si-soon">Pronto</span></button>
       <button class="sidebar-item module-coming-soon" data-module-status="new" disabled><span class="si-ico">🧪</span><span>Laboratorio</span><span class="si-soon">Pronto</span></button>
       <button class="sidebar-item module-coming-soon" data-module-status="new" disabled><span class="si-ico">📡</span><span>Imagenología</span><span class="si-soon">Pronto</span></button>
-      <button class="sidebar-item module-coming-soon" data-module-status="new" disabled><span class="si-ico">📣</span><span>Marketing</span><span class="si-soon">Pronto</span></button>
       <button class="sidebar-item module-coming-soon" data-module-status="new" disabled><span class="si-ico">⚙️</span><span>Automatizaciones</span><span class="si-soon">Pronto</span></button>
       <button class="sidebar-item module-coming-soon" data-module-status="new" disabled><span class="si-ico">🤖</span><span>IA</span><span class="si-soon">Pronto</span></button>
     </div>
@@ -1097,6 +1099,85 @@ try { if(Object.keys(localStorage).some(k=>k.startsWith('sb-')&&k.includes('auth
       <div id="ventas-widget"></div>
       <div id="ventas-lista"></div>
     </div>
+
+    <!-- ══ MARKETING ══ -->
+    <div class="page" id="page-marketing">
+      <div class="sec-hdr">
+        <div><div class="sec-title">📣 Marketing</div></div>
+      </div>
+      <div style="display:grid;grid-template-columns:260px 1fr;gap:16px;align-items:start">
+
+        <!-- Panel izquierdo: Segmentación -->
+        <div class="card">
+          <div class="card-hdr"><div class="card-title">Segmentación</div></div>
+          <div class="card-body" style="display:flex;flex-direction:column;gap:12px">
+            <div class="fi"><label>Especie</label>
+              <select id="mkt-f-especie" onchange="mktCambiarFiltro('especie',this.value)">
+                <option value="todos">Todos</option>
+                <option value="canino">Canino</option>
+                <option value="felino">Felino</option>
+                <option value="equino">Equino</option>
+                <option value="exotico">Exótico</option>
+                <option value="otro">Otro</option>
+              </select></div>
+            <div class="fi"><label>Raza</label>
+              <select id="mkt-f-raza" onchange="mktCambiarFiltro('raza',this.value)"><option value="todos">Todas</option></select></div>
+            <div class="fi"><label>Grupo etario</label>
+              <select id="mkt-f-grupo" onchange="mktCambiarFiltro('grupoEtario',this.value)">
+                <option value="todos">Todos</option>
+                <option value="< 1 año">&lt; 1 año</option>
+                <option value="1–3 años">1–3 años</option>
+                <option value="3–7 años">3–7 años</option>
+                <option value="7–12 años">7–12 años</option>
+                <option value="> 12 años">&gt; 12 años</option>
+              </select></div>
+            <div class="fi"><label>Reproducción</label>
+              <select id="mkt-f-repro" onchange="mktCambiarFiltro('reproduccion',this.value)">
+                <option value="todos">Todos</option>
+                <option value="esterilizado">Esterilizado</option>
+                <option value="no_esterilizado">No esterilizado</option>
+              </select></div>
+            <div class="fi"><label>Sexo</label>
+              <select id="mkt-f-sexo" onchange="mktCambiarFiltro('sexo',this.value)">
+                <option value="todos">Todos</option>
+                <option value="macho">Macho</option>
+                <option value="hembra">Hembra</option>
+              </select></div>
+            <div class="fi"><label>Ciudad</label>
+              <select id="mkt-f-ciudad" onchange="mktCambiarFiltro('ciudad',this.value)"><option value="todos">Todas</option></select></div>
+            <button class="btn btn-outline btn-sm" style="width:100%" onclick="mktLimpiarFiltros()">↺ Limpiar filtros</button>
+          </div>
+        </div>
+
+        <!-- Panel derecho: contadores + mensaje + tabla -->
+        <div>
+          <div style="margin-bottom:12px;font-size:13px">
+            <strong id="mkt-contador-total" style="color:var(--navy)">0 pacientes seleccionados</strong>
+            <span style="color:var(--g500)"> · </span>
+            <span id="mkt-contador-telefono" style="color:var(--g500)">0 con teléfono</span>
+          </div>
+
+          <div class="card" style="margin-bottom:16px">
+            <div class="card-hdr"><div class="card-title">Mensaje</div></div>
+            <div class="card-body">
+              <textarea id="mkt-mensaje" placeholder="Escribe aquí el mensaje del broadcast..." style="width:100%;min-height:130px;padding:10px 12px;border:1.5px solid var(--g300);border-radius:var(--r-sm);font-family:inherit;font-size:13px">Hola {tutor} 👋
+
+En VitalVet tenemos disponible nuestra jornada de profilaxis dental para {mascota}.
+
+Si deseas agendar, escríbenos y te contamos los horarios disponibles.
+
+VitalVet 🐾</textarea>
+              <p style="font-size:11px;color:var(--g500);margin-top:6px">Variables disponibles: <code>{tutor}</code> <code>{mascota}</code> <code>{raza}</code> <code>{edad}</code> — se reemplazan por los datos reales de cada paciente al abrir WhatsApp.</p>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-hdr"><div class="card-title">Pacientes</div></div>
+            <div id="mkt-tabla"></div>
+          </div>
+        </div>
+      </div>
+    </div>
     </div><!-- /main-content -->
   </div><!-- /app-main -->
   </div><!-- /app-shell -->
@@ -1672,6 +1753,11 @@ try { if(Object.keys(localStorage).some(k=>k.startsWith('sb-')&&k.includes('auth
 <script src="/js/ventas/ventas-repository.js"></script>
 <script src="/js/ventas/ventas-service.js"></script>
 <script src="/js/ventas/ventas-ui.js"></script>
+<!-- marketing/* no tiene repository: v1 es 100% datos locales ya cargados
+     (DB.get), sin Supabase — va después de helpers.js/db.js (ya los usa) y
+     antes de app.js. -->
+<script src="/js/marketing/marketing-service.js"></script>
+<script src="/js/marketing/marketing-ui.js"></script>
 <script src="/js/app.js"></script>
 
 </body>
