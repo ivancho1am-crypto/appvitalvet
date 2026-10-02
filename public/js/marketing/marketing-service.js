@@ -114,3 +114,22 @@ function mktLinkWhatsapp(telefono, mensaje) {
   const numero = mktNumeroWhatsapp(telefono);
   return `https://wa.me/${numero}?text=${encodeURIComponent(mensaje)}`;
 }
+
+// ── v1.1: filas listas para MktRepo.crearDeliveries ───────────────────────
+// Pura — no toca Supabase. Solo los pacientes CON teléfono entran a la
+// campaña (sin teléfono no hay a quién registrarle un delivery). El mensaje
+// ya queda personalizado por paciente en message_rendered: así el Historial
+// muestra exactamente lo que se le iba a mandar a cada uno, aunque la
+// plantilla cambie después.
+function mktConstruirFilasDelivery(pacientes, mensaje) {
+  return pacientes
+    .filter(p => p.telefono)
+    .map(p => ({
+      mascota_id: p.mascotaId,
+      phone: mktNumeroWhatsapp(p.telefono),
+      tutor_name: p.tutorNombre,
+      message_rendered: mktAplicarPlantilla(mensaje, p),
+      status: 'manual_pendiente',
+      created_at: new Date().toISOString(),
+    }));
+}

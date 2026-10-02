@@ -1168,12 +1168,19 @@ Si deseas agendar, escríbenos y te contamos los horarios disponibles.
 
 VitalVet 🐾</textarea>
               <p style="font-size:11px;color:var(--g500);margin-top:6px">Variables disponibles: <code>{tutor}</code> <code>{mascota}</code> <code>{raza}</code> <code>{edad}</code> — se reemplazan por los datos reales de cada paciente al abrir WhatsApp.</p>
+              <button class="btn btn-green btn-sm" id="mkt-btn-guardar" style="margin-top:10px" onclick="mktGuardarCampaña()">💾 Guardar campaña y generar lista</button>
+              <p style="font-size:11px;color:var(--g500);margin-top:4px">Queda registrada en Supabase (historial abajo) — seguís abriendo WhatsApp manualmente, uno por uno, nada se envía solo.</p>
             </div>
           </div>
 
           <div class="card">
             <div class="card-hdr"><div class="card-title">Pacientes</div></div>
             <div id="mkt-tabla"></div>
+          </div>
+
+          <div class="card" style="margin-top:16px">
+            <div class="card-hdr"><div class="card-title">📜 Historial de campañas</div></div>
+            <div class="card-body" id="mkt-historial"></div>
           </div>
         </div>
       </div>
@@ -1273,6 +1280,15 @@ VitalVet 🐾</textarea>
 </div>
 
 <!-- HISTORIA ENTRADA -->
+<!-- MARKETING — detalle de campaña guardada -->
+<div class="mo" id="m-mkt-historial">
+  <div class="md md-lg">
+    <div class="mh"><div class="mt">📣 Detalle de campaña</div><button class="mx" onclick="closeM('m-mkt-historial')">✕</button></div>
+    <div class="mb" id="mkt-historial-detalle"></div>
+    <div class="mf"><button class="btn btn-outline" onclick="closeM('m-mkt-historial')">Cerrar</button></div>
+  </div>
+</div>
+
 <div class="mo" id="m-hist">
   <div class="md md-lg">
     <div class="mh"><div class="mt" id="mh-title">📋 Nueva entrada clínica</div><button class="mx" onclick="closeM('m-hist')">✕</button></div>
@@ -1753,9 +1769,11 @@ VitalVet 🐾</textarea>
 <script src="/js/ventas/ventas-repository.js"></script>
 <script src="/js/ventas/ventas-service.js"></script>
 <script src="/js/ventas/ventas-ui.js"></script>
-<!-- marketing/* no tiene repository: v1 es 100% datos locales ya cargados
-     (DB.get), sin Supabase — va después de helpers.js/db.js (ya los usa) y
-     antes de app.js. -->
+<!-- marketing-repository.js (v1.1): único archivo de Marketing que habla con
+     Supabase — reusa marketing_campaigns/broadcast_campaign_deliveries de
+     VitaBot, marcadas como canal manual (ver el propio archivo). El resto
+     de Marketing sigue siendo datos locales ya cargados (DB.get). -->
+<script src="/js/marketing/marketing-repository.js"></script>
 <script src="/js/marketing/marketing-service.js"></script>
 <script src="/js/marketing/marketing-ui.js"></script>
 <script src="/js/app.js"></script>
