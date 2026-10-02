@@ -41,9 +41,26 @@ const VentasRepo = {
     const sb = getSB(); if (!sb) throw new Error('Sin conexión');
     const correo = await _ventaUsuarioActual();
 
+    // El panel manda el id de vv_store del propietario ('p1738…'), pero la
+    // columna es uuid y apunta a `tutores`. Se traduce acá, que es la capa
+    // que habla con la base. Ver _ventaResolverTutorId abajo.
+    const propietarioUuid = await _ventaResolverTutorId(sb, ventaFila.propietario_id);
+
     const { data: venta, error: errVenta } = await sb.from('ventas')
-      .insert({ ...ventaFila, creado_por: ventaFila.creado_por || correo }).select().single();
-    if (errVenta) throw new Error('No se pudo crear la venta: ' + errVenta.message);
+      .insert({ ...ventaFila, propietario_id: propietarioUuid, creado_por: ventaFila.creado_por || correo })
+      .select().single();
+    if (errVenta) {
+      // Mientras no se aplique db/migraciones/2026-10-02_ventas-propietario-a-tutores.sql,
+      // la FK de propietario_id sigue apuntando a `propietarios` (vacía) y
+      // cualquier venta con propietario registrado rebota acá. El mensaje de
+      // Postgres no dice nada útil, así que se traduce.
+      const esFKPropietario = /foreign key|violates/i.test(errVenta.message || '') &&
+                              /propietario/i.test(errVenta.message || '');
+      if (esFKPropietario) {
+        throw new Error('Falta aplicar en Supabase la migración db/migraciones/2026-10-02_ventas-propietario-a-tutores.sql. Mientras tanto, registrá la venta como mostrador.');
+      }
+      throw new Error('No se pudo crear la venta: ' + errVenta.message);
+    }
 
     const itemsConVentaId = itemsFilas.map(i => ({ ...i, venta_id: venta.id }));
     const { error: errItems } = await sb.from('venta_items').insert(itemsConVentaId);
@@ -71,19 +88,76 @@ const VentasRepo = {
     return venta;
   },
 
-  // Mismo criterio que anularGasto/anularPago: no se borra, se anula. OJO:
-  // no revierte el inventario_movimientos asociado — limitación conocida de
-  // este ciclo (ver reporte), habría que ajustarlo a mano en Inventario si
-  // hace falta.
+  // Mismo criterio que anularGasto/anularPago: no se borra, se anula. Y
+  // desde 2026-10-02 también DEVUELVE el stock al inventario: antes la venta
+  // quedaba anulada pero el producto seguía descontado y había que
+  // corregirlo a mano.
+  //
+  // El orden importa. Primero se anula y después se devuelve el stock, no al
+  // revés: si fallara el paso 2 queda una venta anulada con el stock todavía
+  // descontado — exactamente el comportamiento viejo, molesto pero inofensivo
+  // y corregible desde "🔢 Existencias". Al revés sería peor: stock devuelto
+  // sobre una venta que sigue activa, o sea inventario inflado.
   async anularVenta(id) {
     const sb = getSB(); if (!sb) throw new Error('Sin conexión');
     const correo = await _ventaUsuarioActual();
+
+    // Anular dos veces devolvería el stock por duplicado.
+    const { data: actual, error: errLeer } = await sb.from('ventas')
+      .select('id, anulado').eq('id', id).maybeSingle();
+    if (errLeer) throw new Error('No se pudo leer la venta: ' + errLeer.message);
+    if (!actual) throw new Error('Esa venta ya no existe');
+    if (actual.anulado) throw new Error('Esa venta ya estaba anulada');
+
     const { error } = await sb.from('ventas')
       .update({ anulado: true, anulado_at: new Date().toISOString(), anulado_por: correo })
       .eq('id', id);
     if (error) throw error;
+
+    // Solo los movimientos de motivo 'venta': las devoluciones que escribe
+    // esta misma función también llevan venta_id, y sin este filtro una
+    // segunda anulación las volvería a sumar.
+    const { data: movs, error: errMovs } = await sb.from('inventario_movimientos')
+      .select('producto_id, cantidad, lote_id').eq('venta_id', id).eq('motivo', 'venta');
+    if (errMovs) throw new Error('Venta anulada, pero no pude leer sus movimientos de inventario: ' + errMovs.message);
+
+    const devoluciones = (movs || [])
+      .filter(m => (parseFloat(m.cantidad) || 0) < 0)
+      .map(m => ({
+        producto_id: m.producto_id,
+        lote_id: m.lote_id || null,          // vuelve al mismo lote si salió de uno
+        cantidad: Math.abs(parseFloat(m.cantidad)),
+        motivo: 'devolucion',
+        venta_id: id,
+        nota: `Anulación de venta #${id}`,
+      }));
+
+    if (devoluciones.length) {
+      const { error: errDev } = await sb.from('inventario_movimientos').insert(devoluciones);
+      if (errDev) throw new Error('Venta anulada, pero el stock NO se devolvió al inventario: ' + errDev.message + ' — corregilo con "🔢 Existencias" en Inventario.');
+    }
+    return { productosDevueltos: devoluciones.length };
   },
 };
+
+// El select de propietario se llena con DB.get('props') (vv_store), así que
+// manda ids tipo 'p1738…'. Pero ventas.propietario_id es uuid y apunta a
+// `tutores`. El puente es tutores.saas_prop_id, el mismo enlace que usa
+// js/espejo.js. Sin esta traducción, toda venta con propietario registrado
+// fallaba (la de mostrador no, porque ahí va NULL).
+const _RE_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+async function _ventaResolverTutorId(sb, propietarioId) {
+  if (!propietarioId) return null;                        // venta de mostrador
+  if (_RE_UUID.test(propietarioId)) return propietarioId; // ya venía resuelto
+  const { data, error } = await sb.from('tutores')
+    .select('id').eq('saas_prop_id', propietarioId).maybeSingle();
+  if (error) throw new Error('No se pudo buscar el propietario: ' + error.message);
+  if (!data) {
+    throw new Error('Ese propietario todavía no llegó a la base relacional. Entrá a Inicio → "🔗 Espejo relacional" → Verificar ahora → Reparar, y volvé a intentar la venta.');
+  }
+  return data.id;
+}
 
 // Mismo patrón que _finUsuarioActual (finanzas-repository.js) y _rSaludo
 // (dashboard.js) — duplicado acá a propósito, no importado entre módulos.

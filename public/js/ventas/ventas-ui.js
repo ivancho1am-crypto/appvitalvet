@@ -10,6 +10,7 @@
 let VENTAS_FECHA = new Date();      // día que se está viendo en el registro
 let VENTA_ITEMS_ACTUAL = [];        // ítems agregados en el formulario, antes de guardar
 let VENTAS_CACHE_PRODUCTOS = [];    // último listarProductos(), para el select del ítem
+let VENTAS_CACHE_LISTA = [];        // ventas del día que se están viendo, para anular sin volver a pedirlas
 
 // ── Render principal — lo llama go('ventas', ...) en nav.js ────────────────
 async function rVentas() {
@@ -23,6 +24,7 @@ async function rVentas() {
   let ventas;
   try {
     ventas = await VentasRepo.listarVentas(fecha, fecha);
+    VENTAS_CACHE_LISTA = ventas;
   } catch (e) {
     console.warn('[ventas] rVentas:', e);
     cont.innerHTML = `<div class="empty-state" style="padding:36px"><div class="empty-ic">⚠️</div>
@@ -98,12 +100,25 @@ function ventasDiaSiguiente() { VENTAS_FECHA.setDate(VENTAS_FECHA.getDate() + 1)
 function ventasHoy() { VENTAS_FECHA = new Date(); rVentas(); }
 
 async function ventaAnular(id) {
-  if (!confirm('¿Anular esta venta? El inventario descontado NO se revierte automáticamente — si hace falta, ajustalo a mano en Inventario.')) return;
+  const v = (VENTAS_CACHE_LISTA || []).find(x => x.id === id);
+  const productos = v ? (v.items || []).filter(i => i.tipo === 'producto' && i.producto_id) : [];
+  const detalle = productos.length
+    ? `\n\nSe devolverán al inventario:\n` + productos.map(i => `  · ${i.cantidad} × ${i.nombre}`).join('\n')
+    : '\n\nEsta venta no tiene productos de inventario, así que no hay stock que devolver.';
+  if (!confirm(`¿Anular esta venta${v ? ' por ' + fmt$(v.total) : ''}?${detalle}\n\nLa venta queda registrada como anulada, no se borra.`)) return;
+
   try {
-    await VentasRepo.anularVenta(id);
-    toast('Venta anulada ✓', 'ok');
+    const r = await VentasRepo.anularVenta(id);
+    const n = (r && r.productosDevueltos) || 0;
+    toast(n ? `Venta anulada ✓ — ${n} producto${n === 1 ? '' : 's'} devuelto${n === 1 ? '' : 's'} al inventario` : 'Venta anulada ✓', 'ok');
     rVentas();
-  } catch (e) { toast('No se pudo anular la venta', 'err'); console.warn(e); }
+    // El stock cambió: si Inventario está cargado, que se vea al instante.
+    if (typeof _invActualizarBadge === 'function') _invActualizarBadge();
+  } catch (e) {
+    console.error('[ventas] anular:', e);
+    toast(e.message || 'No se pudo anular la venta', 'err');
+    rVentas();   // puede haber quedado anulada aunque fallara la devolución
+  }
 }
 
 // ── Modal "Nueva venta" ─────────────────────────────────────────────────────

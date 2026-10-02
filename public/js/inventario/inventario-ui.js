@@ -113,6 +113,7 @@ function _invRenderTabla() {
         <td>${p.precio_venta != null ? fmt$(p.precio_venta) : '—'}</td>
         <td style="white-space:nowrap">
           <button class="btn btn-outline btn-xs" onclick="invAbrirMovimiento('${p.id}')">↕ Movimiento</button>
+          <button class="btn btn-outline btn-xs" onclick="invCorregirExistencias('${p.id}')" title="Corregir las unidades si se registraron de más o de menos">🔢 Existencias</button>
           <button class="btn btn-outline btn-xs" onclick="invAbrirNuevoLote('${p.id}')">📦+ Lote</button>
           <button class="btn btn-outline btn-xs" onclick="invVerHistorial('${p.id}')">🕓</button>
           <button class="btn btn-outline btn-xs" onclick="invAbrirEditarProducto('${p.id}')">✎</button>
@@ -458,6 +459,24 @@ function invAbrirConteo() {
   document.getElementById('inv-c-diferencia').value = '';
   document.getElementById('inv-c-nota').value = '';
   openM('m-inv-conteo');
+}
+
+// Corregir las unidades de UN producto concreto, desde su propia fila.
+// Es el mismo conteo físico de siempre (crea un movimiento de ajuste, nunca
+// toca el stock directo), pero llegando desde el producto en vez de tener que
+// buscarlo en la lista: el caso real es "registré 10 y eran 8, lo corrijo ya".
+function invCorregirExistencias(productoId) {
+  invAbrirConteo();
+  const sel = document.getElementById('inv-c-prod');
+  if (!sel) return;
+  sel.value = productoId;
+  if (sel.value !== productoId) {   // el producto no está en la lista cargada
+    toast('No encontré ese producto en la lista actual', 'err');
+    return;
+  }
+  invConteoProductoCambiado();      // rellena "stock del sistema"
+  const fisico = document.getElementById('inv-c-fisico');
+  if (fisico) fisico.focus();
 }
 
 function invConteoProductoCambiado() {
