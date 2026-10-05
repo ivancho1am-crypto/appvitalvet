@@ -47,11 +47,20 @@ const MktRepo = {
   },
 
   // filasBase: ya armadas por mktConstruirFilasDelivery (marketing-service.js)
-  // — esta capa solo agrega campaign_id e inserta, no calcula nada.
+  // con el mascota_id de vv_store ('m1738…'). broadcast_campaign_deliveries.
+  // mascota_id es uuid y apunta a `pacientes` (ver db/migraciones/
+  // 2026-10-05_marketing-mascota-a-pacientes.sql) — se traduce acá, mismo
+  // patrón que _ventaResolverTutorId en ventas-repository.js. Encontrado
+  // antes de que nadie lo usara de verdad (0 campañas reales guardadas),
+  // así que esto no corrige datos, previene el primer fallo.
   async crearDeliveries(campaignId, filasBase) {
     const sb = getSB(); if (!sb) throw new Error('Sin conexión');
     if (!filasBase.length) return [];
-    const filas = filasBase.map(f => ({ ...f, campaign_id: campaignId }));
+    const filas = [];
+    for (const f of filasBase) {
+      const pacienteUuid = await _mktResolverPacienteId(sb, f.mascota_id);
+      filas.push({ ...f, mascota_id: pacienteUuid, campaign_id: campaignId });
+    }
     const { data, error } = await sb.from('broadcast_campaign_deliveries').insert(filas).select();
     if (error) throw new Error('Campaña creada, pero no se pudo generar la lista de contactos: ' + error.message);
     return data;
@@ -91,6 +100,23 @@ const MktRepo = {
     return data || [];
   },
 };
+
+// A diferencia de _ventaResolverTutorId (que si no encuentra el tutor
+// bloquea TODA la venta), acá NO se bloquea la campaña completa por un
+// paciente puntual sin espejar todavía: mascota_id queda null para esa
+// fila (el teléfono/tutor/mensaje siguen intactos, solo se pierde el
+// enlace a pacientes para esa fila) y se avisa por consola. Bloquear a
+// los demás destinatarios por uno solo sería peor que perder un enlace.
+async function _mktResolverPacienteId(sb, mascotaIdLocal) {
+  if (!mascotaIdLocal) return null;
+  try {
+    const { data, error } = await sb.from('pacientes')
+      .select('id').eq('saas_mas_id', mascotaIdLocal).maybeSingle();
+    if (error) { console.warn('[marketing] no se pudo resolver paciente:', error.message); return null; }
+    if (!data) { console.warn('[marketing] paciente todavía no espejado:', mascotaIdLocal); return null; }
+    return data.id;
+  } catch (e) { console.warn('[marketing] _mktResolverPacienteId:', e.message); return null; }
+}
 
 // Mismo patrón que _ventaUsuarioActual/_finUsuarioActual — duplicado a
 // propósito, no se importa entre módulos.
