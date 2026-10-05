@@ -273,7 +273,15 @@ async function invDesactivarProducto(id) {
   if (!confirm(`¿Desactivar "${p ? p.nombre : 'este producto'}"? Deja de aparecer en la lista, pero su historial se conserva.`)) return;
   try {
     await InventarioRepo.actualizarProducto(id, { activo: false });
-    toast('Producto desactivado ✓', 'ok');
+    // Bug encontrado el 2026-10-05: sin esto, los lotes del producto seguían
+    // "activos" para siempre — un lote mal registrado podía quedar vencido
+    // en el widget aunque el producto ya no existiera en ningún listado.
+    let lotesDesactivados = 0;
+    try { lotesDesactivados = await InventarioRepo.desactivarLotesDeProducto(id); }
+    catch (eLotes) { console.warn('[inventario] no se pudieron desactivar los lotes del producto:', eLotes); }
+    toast(lotesDesactivados
+      ? `Producto desactivado ✓ (y ${lotesDesactivados} lote${lotesDesactivados === 1 ? '' : 's'} suyo${lotesDesactivados === 1 ? '' : 's'})`
+      : 'Producto desactivado ✓', 'ok');
     rInventario();
   } catch (e) { toast('No se pudo desactivar el producto', 'err'); console.warn(e); }
 }
@@ -391,19 +399,110 @@ async function invVerHistorial(productoId) {
   </table></div>`;
 }
 
-// ── Modal "Nuevo lote" (Ciclo 2) ────────────────────────────────────────────
-function invAbrirNuevoLote(productoId) {
+// ── Modal "Lotes" (Ciclo 2 + edición 2026-10-05) ───────────────────────────
+// Un solo modal para ver los lotes que ya existen de este producto Y crear
+// uno nuevo. Antes solo existía la parte de "crear" — la única forma de
+// corregir un lote mal registrado era crear otro encima, y eso fue
+// exactamente lo que generó 3 lotes "WPT2504" distintos para el mismo
+// producto en un solo intento de corrección.
+let INV_LOTE_PRODUCTO_ACTUAL = null;  // productoId del modal abierto, para recargar la lista tras guardar
+let INV_LOTE_CACHE = [];              // últimos lotes listados, para prellenar al editar sin volver a pedir
+
+async function invAbrirNuevoLote(productoId) {
   const p = INV_CACHE_PRODUCTOS.find(x => x.id === productoId);
   if (!p) { toast('Producto no encontrado', 'err'); return; }
-  document.getElementById('inv-l-producto-id').value = productoId;
-  document.getElementById('m-inv-lote-titulo').textContent = `📦 Nuevo lote — ${p.nombre}`;
+  INV_LOTE_PRODUCTO_ACTUAL = productoId;
+  document.getElementById('m-inv-lote-titulo').textContent = `📦 Lotes — ${p.nombre}`;
+  _invLoteLimpiarFormulario(p);
+  openM('m-inv-lote');
+  await _invRenderListaLotes(productoId);
+}
+
+function _invLoteLimpiarFormulario(producto) {
+  document.getElementById('inv-l-id').value = '';            // vacío = modo "nuevo"
+  document.getElementById('inv-l-producto-id').value = producto ? producto.id : INV_LOTE_PRODUCTO_ACTUAL;
+  document.getElementById('inv-l-form-titulo').textContent = '➕ Nuevo lote';
   document.getElementById('inv-l-numero').value = '';
   document.getElementById('inv-l-fabricacion').value = '';
   document.getElementById('inv-l-vencimiento').value = '';
   document.getElementById('inv-l-cantidad').value = '';
-  document.getElementById('inv-l-costo').value = p.costo_unitario ?? '';
-  document.getElementById('inv-l-proveedor').value = p.proveedor || '';
-  openM('m-inv-lote');
+  document.getElementById('inv-l-cantidad').disabled = false;
+  document.getElementById('inv-l-cantidad-nota').style.display = 'none';
+  document.getElementById('inv-l-costo').value = producto ? (producto.costo_unitario ?? '') : '';
+  document.getElementById('inv-l-proveedor').value = producto ? (producto.proveedor || '') : '';
+  document.getElementById('inv-l-save-btn').textContent = '💾 Guardar lote';
+  document.getElementById('inv-l-cancelar-edicion').style.display = 'none';
+}
+
+// Lista los lotes del producto (activos e inactivos: ver inactivos ayuda a
+// entender qué pasó si alguna vez quedan huérfanos otra vez) con su
+// clasificación de vencimiento, y acciones ✎ Editar / 🗑️ Desactivar.
+async function _invRenderListaLotes(productoId) {
+  const cont = document.getElementById('inv-l-lista');
+  cont.innerHTML = '<p style="font-size:12px;color:var(--g500)">Cargando lotes…</p>';
+  let lotes;
+  try { lotes = await InventarioRepo.listarLotesDeProducto(productoId); }
+  catch (e) { cont.innerHTML = '<p style="font-size:12px;color:var(--g500)">No se pudieron cargar los lotes existentes</p>'; console.warn(e); return; }
+
+  INV_LOTE_CACHE = lotes;
+  if (!lotes.length) { cont.innerHTML = '<p style="font-size:12px;color:var(--g500)">Este producto todavía no tiene lotes registrados</p>'; return; }
+
+  cont.innerHTML = `<div class="tw"><table>
+    <thead><tr><th>Lote</th><th>Vencimiento</th><th>Stock</th><th>Estado</th><th>Acción</th></tr></thead>
+    <tbody>${lotes.map(l => {
+      const clase = l.activo ? invClasificarVencimiento(l.fecha_vencimiento) : null;
+      const info = clase ? (INV_VENC_INFO[clase] || {}) : null;
+      return `<tr style="${l.activo ? '' : 'opacity:.5'}">
+        <td>${l.numero_lote}</td>
+        <td>${l.fecha_vencimiento ? new Date(l.fecha_vencimiento + 'T00:00:00').toLocaleDateString('es-CO') : '—'}
+          ${info ? `<span class="badge ${info.badge}" style="margin-left:6px;font-size:9px">${info.icon}</span>` : ''}</td>
+        <td>${l.stock_actual}</td>
+        <td style="font-size:11px">${l.activo ? 'Activo' : 'Desactivado'}</td>
+        <td style="white-space:nowrap">
+          <button class="btn btn-outline btn-xs" onclick="invEditarLote('${l.lote_id}')">✎</button>
+          ${l.activo ? `<button class="btn btn-outline btn-xs" onclick="invDesactivarLote('${l.lote_id}')">🗑️</button>` : ''}
+        </td>
+      </tr>`;
+    }).join('')}</tbody>
+  </table></div>`;
+}
+
+// Carga un lote existente en el mismo formulario de abajo, en modo edición.
+// cantidad_inicial queda deshabilitada a propósito: es un dato histórico
+// (ver comentario en invConstruirEdicionLote) — si el conteo real era otro,
+// eso se corrige con un movimiento de ajuste ("🔢 Existencias"), no acá.
+function invEditarLote(loteId) {
+  const l = INV_LOTE_CACHE.find(x => x.lote_id === loteId);
+  if (!l) { toast('Ese lote ya no está en la lista — recargá el modal', 'err'); return; }
+  document.getElementById('inv-l-id').value = l.lote_id;
+  document.getElementById('inv-l-form-titulo').textContent = `✎ Editando lote "${l.numero_lote}"`;
+  document.getElementById('inv-l-numero').value = l.numero_lote || '';
+  document.getElementById('inv-l-fabricacion').value = l.fecha_fabricacion || '';
+  document.getElementById('inv-l-vencimiento').value = l.fecha_vencimiento || '';
+  document.getElementById('inv-l-cantidad').value = l.cantidad_inicial != null ? l.cantidad_inicial : '';
+  document.getElementById('inv-l-cantidad').disabled = true;
+  document.getElementById('inv-l-cantidad-nota').style.display = 'block';
+  document.getElementById('inv-l-costo').value = l.costo_unitario ?? '';
+  document.getElementById('inv-l-proveedor').value = l.proveedor || '';
+  document.getElementById('inv-l-save-btn').textContent = '💾 Guardar corrección';
+  document.getElementById('inv-l-cancelar-edicion').style.display = 'inline-flex';
+  document.getElementById('inv-l-form-titulo').scrollIntoView({ block: 'nearest' });
+}
+
+function invCancelarEdicionLote() {
+  const p = INV_CACHE_PRODUCTOS.find(x => x.id === INV_LOTE_PRODUCTO_ACTUAL);
+  _invLoteLimpiarFormulario(p);
+}
+
+async function invDesactivarLote(loteId) {
+  const l = INV_LOTE_CACHE.find(x => x.lote_id === loteId);
+  if (!confirm(`¿Desactivar el lote "${l ? l.numero_lote : ''}"? Deja de contar en vencimientos y en el stock del producto. No borra su historial de movimientos.`)) return;
+  try {
+    await InventarioRepo.actualizarLote(loteId, { activo: false });
+    toast('Lote desactivado ✓', 'ok');
+    await _invRenderListaLotes(INV_LOTE_PRODUCTO_ACTUAL);
+    rInventario();   // el stock del producto y el widget de vencimientos cambiaron
+  } catch (e) { toast('No se pudo desactivar el lote', 'err'); console.warn(e); }
 }
 
 // Crea el lote y, encadenado, su movimiento de entrada inicial — un lote
@@ -412,7 +511,36 @@ function invAbrirNuevoLote(productoId) {
 // pero el movimiento falla, se avisa explícitamente qué quedó a medias,
 // mismo criterio que VentasRepo.crearVenta.
 async function invGuardarLote() {
+  const loteId = document.getElementById('inv-l-id').value;
   const productoId = document.getElementById('inv-l-producto-id').value;
+
+  // ── Modo edición: corrige un lote ya creado, nunca su cantidad_inicial ──
+  if (loteId) {
+    const { error, cambios } = invConstruirEdicionLote({
+      numeroLote: document.getElementById('inv-l-numero').value,
+      fechaFabricacion: document.getElementById('inv-l-fabricacion').value,
+      fechaVencimiento: document.getElementById('inv-l-vencimiento').value,
+      costoUnitario: document.getElementById('inv-l-costo').value,
+      proveedor: document.getElementById('inv-l-proveedor').value,
+    });
+    if (error) { toast(error, 'err'); return; }
+    const btn = document.getElementById('inv-l-save-btn');
+    if (btn) { btn.disabled = true; btn.textContent = 'Guardando…' }
+    try {
+      await InventarioRepo.actualizarLote(loteId, cambios);
+      toast('Lote corregido ✓', 'ok');
+      invCancelarEdicionLote();
+      await _invRenderListaLotes(productoId);
+      rInventario();   // el vencimiento pudo cambiar: refresca el widget
+    } catch (e) {
+      toast('No se pudo guardar la corrección', 'err'); console.warn(e);
+    } finally {
+      if (btn) { btn.disabled = false; btn.textContent = '💾 Guardar corrección' }
+    }
+    return;
+  }
+
+  // ── Modo creación: igual que siempre, lote + su entrada inicial ────────
   const { error, loteFila, movimientoBase } = invConstruirLote({
     productoId,
     numeroLote: document.getElementById('inv-l-numero').value,
@@ -433,12 +561,13 @@ async function invGuardarLote() {
     } catch (eMov) {
       toast(`Lote "${lote.numero_lote}" creado, pero su entrada inicial NO se registró: ${eMov.message}`, 'err');
       console.warn(eMov);
-      closeM('m-inv-lote');
+      await _invRenderListaLotes(productoId);
       rInventario();
       return;
     }
     toast('Lote registrado ✓', 'ok');
-    closeM('m-inv-lote');
+    invCancelarEdicionLote();
+    await _invRenderListaLotes(productoId);
     rInventario();
   } catch (e) {
     toast('No se pudo crear el lote', 'err'); console.warn(e);

@@ -75,6 +75,18 @@ const InventarioRepo = {
     return data || [];
   },
 
+  // Desactivar un producto NO desactivaba sus lotes (bug encontrado el
+  // 2026-10-05: un lote mal registrado quedaba "vencido" en el widget para
+  // siempre, aunque el producto ya se hubiera desactivado). invDesactivarProducto
+  // llama esto justo después de desactivar el producto — ver inventario-ui.js.
+  async desactivarLotesDeProducto(productoId) {
+    const sb = getSB(); if (!sb) throw new Error('Sin conexión');
+    const { data, error } = await sb.from('lotes')
+      .update({ activo: false }).eq('producto_id', productoId).eq('activo', true).select('id');
+    if (error) throw error;
+    return (data || []).length;
+  },
+
   async crearLote(fila) {
     const sb = getSB(); if (!sb) throw new Error('Sin conexión');
     const { data, error } = await sb.from('lotes').insert(fila).select().single();

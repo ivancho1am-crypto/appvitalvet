@@ -127,6 +127,33 @@ function invConstruirLote({ productoId, numeroLote, fechaFabricacion, fechaVenci
   };
 }
 
+// Corregir un lote YA creado (2026-10-05): número/fechas/costo/proveedor,
+// nunca cantidad_inicial — es un dato histórico ("lo que entró ese día"),
+// igual que ya dice el comentario de la migración. Si la cantidad real
+// estaba mal, eso se corrige con un movimiento de ajuste (🔢 Existencias),
+// no editando el lote.
+//
+// Se construyó porque no existía NINGUNA forma de arreglar un lote mal
+// registrado salvo crear uno nuevo — eso fue justo lo que generó 3 lotes
+// "WPT2504" distintos (uno por cada intento de corrección) en vez de 1.
+function invConstruirEdicionLote({ numeroLote, fechaFabricacion, fechaVencimiento, costoUnitario, proveedor }) {
+  if (!numeroLote || !numeroLote.trim()) return { error: 'Escribe el número de lote' };
+  if (fechaFabricacion && fechaVencimiento && fechaFabricacion > fechaVencimiento) {
+    return { error: 'La fecha de fabricación no puede ser posterior al vencimiento' };
+  }
+  const costo = costoUnitario === '' || costoUnitario == null ? null : parseFloat(costoUnitario);
+  if (costo != null && (isNaN(costo) || costo < 0)) return { error: 'El costo no puede ser negativo' };
+  return {
+    cambios: {
+      numero_lote: numeroLote.trim(),
+      fecha_fabricacion: fechaFabricacion || null,
+      fecha_vencimiento: fechaVencimiento || null,
+      costo_unitario: costo,
+      proveedor: (proveedor || '').trim() || null,
+    },
+  };
+}
+
 // ── Kardex, vencimientos, valor de inventario, conteo físico (Ciclo 3) ─────
 
 // Recorre movimientos YA ordenados cronológicamente (ascendente) y agrega

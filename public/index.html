@@ -1486,22 +1486,36 @@ VitalVet 🐾</textarea>
 
 <!-- NUEVO LOTE (Inventario — Ciclo 2) -->
 <div class="mo" id="m-inv-lote">
-  <div class="md">
-    <div class="mh"><div class="mt" id="m-inv-lote-titulo">📦 Nuevo lote</div><button class="mx" onclick="closeM('m-inv-lote')">✕</button></div>
+  <div class="md md-lg">
+    <div class="mh"><div class="mt" id="m-inv-lote-titulo">📦 Lotes</div><button class="mx" onclick="closeM('m-inv-lote')">✕</button></div>
     <div class="mb">
+      <!-- Lotes ya existentes de este producto: antes no había forma de
+           corregir uno salvo crear otro encima (así se llegó a tener 3
+           lotes "WPT2504" distintos para el mismo error). Acá se ve cuáles
+           hay y se puede editar o desactivar cada uno. -->
+      <div class="card-title" style="margin-bottom:8px">Lotes existentes</div>
+      <div id="inv-l-lista" style="margin-bottom:18px"></div>
+
+      <div class="card-title" id="inv-l-form-titulo" style="margin-bottom:8px">➕ Nuevo lote</div>
+      <input type="hidden" id="inv-l-id">
       <input type="hidden" id="inv-l-producto-id">
       <div class="fg">
         <div class="fi"><label>Número de lote *</label><input type="text" id="inv-l-numero" placeholder="Ej. A123"></div>
         <div class="fi"><label>Fecha de fabricación</label><input type="date" id="inv-l-fabricacion"></div>
         <div class="fi"><label>Fecha de vencimiento</label><input type="date" id="inv-l-vencimiento"></div>
-        <div class="fi"><label>Cantidad inicial *</label><input type="number" id="inv-l-cantidad" placeholder="0" min="0" step="any"></div>
+        <div class="fi">
+          <label>Cantidad inicial *</label>
+          <input type="number" id="inv-l-cantidad" placeholder="0" min="0" step="any">
+          <p id="inv-l-cantidad-nota" style="display:none;font-size:10px;color:var(--g500);margin-top:3px">No se puede editar — es lo que entró ese día. Si la cantidad real era otra, usá "🔢 Existencias" en vez de esto.</p>
+        </div>
         <div class="fi"><label>Costo unitario</label><input type="number" id="inv-l-costo" placeholder="Opcional" min="0"></div>
         <div class="fi ff"><label>Proveedor</label><input type="text" id="inv-l-proveedor" placeholder="Opcional"></div>
       </div>
-      <p style="font-size:11px;color:var(--g500);margin-top:6px">Al guardar, se registra automáticamente la entrada inicial de este lote en el inventario.</p>
+      <p style="font-size:11px;color:var(--g500);margin-top:6px">Al guardar un lote nuevo, se registra automáticamente su entrada inicial en el inventario.</p>
     </div>
     <div class="mf">
-      <button class="btn btn-outline" onclick="closeM('m-inv-lote')">Cancelar</button>
+      <button class="btn btn-outline" id="inv-l-cancelar-edicion" style="display:none" onclick="invCancelarEdicionLote()">Cancelar edición</button>
+      <button class="btn btn-outline" onclick="closeM('m-inv-lote')">Cerrar</button>
       <button class="btn btn-green" id="inv-l-save-btn" onclick="invGuardarLote()">💾 Guardar lote</button>
     </div>
   </div>
