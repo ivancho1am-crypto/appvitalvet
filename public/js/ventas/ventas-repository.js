@@ -31,12 +31,13 @@ const VentasRepo = {
     return ventas.map(v => ({ ...v, items: itemsPorVenta[v.id] || [] }));
   },
 
-  // Inserta la venta, sus ítems, y por cada ítem de producto el movimiento
-  // de salida en Inventario. Secuencial, no es una transacción atómica real
-  // (no hay RPC de Postgres para esto todavía — de más para este ciclo): si
-  // algo falla a mitad de camino, se lanza un error que dice en qué paso
-  // quedó, para que ventas-ui.js pueda avisar exactamente qué se alcanzó a
-  // guardar en vez de un "algo salió mal" genérico.
+  // Crea la venta + sus ítems + el movimiento de inventario de cada
+  // producto. Desde 2026-10-05 intenta hacerlo ATÓMICO de verdad, vía la
+  // función crear_venta_completa() (ver db/migraciones/2026-10-05_ventas-
+  // transaccional.sql): si cualquier paso falla, Postgres revierte TODO
+  // solo, no hay estado parcial posible. Si esa migración todavía no se
+  // aplicó, cae al camino secuencial de siempre (_ventaCrearSecuencial) sin
+  // romper nada — esto es puramente aditivo.
   async crearVenta(ventaFila, itemsFilas) {
     const sb = getSB(); if (!sb) throw new Error('Sin conexión');
     const correo = await _ventaUsuarioActual();
@@ -45,48 +46,37 @@ const VentasRepo = {
     // columna es uuid y apunta a `tutores`. Se traduce acá, que es la capa
     // que habla con la base. Ver _ventaResolverTutorId abajo.
     const propietarioUuid = await _ventaResolverTutorId(sb, ventaFila.propietario_id);
+    const creadoPor = ventaFila.creado_por || correo;
 
-    const { data: venta, error: errVenta } = await sb.from('ventas')
-      .insert({ ...ventaFila, propietario_id: propietarioUuid, creado_por: ventaFila.creado_por || correo })
-      .select().single();
-    if (errVenta) {
-      // Mientras no se aplique db/migraciones/2026-10-02_ventas-propietario-a-tutores.sql,
-      // la FK de propietario_id sigue apuntando a `propietarios` (vacía) y
-      // cualquier venta con propietario registrado rebota acá. El mensaje de
-      // Postgres no dice nada útil, así que se traduce.
-      const esFKPropietario = /foreign key|violates/i.test(errVenta.message || '') &&
-                              /propietario/i.test(errVenta.message || '');
+    const { data: viaRPC, error: errRPC } = await sb.rpc('crear_venta_completa', {
+      p_propietario_id: propietarioUuid,
+      p_cliente_nombre: ventaFila.cliente_nombre || null,
+      p_fecha: ventaFila.fecha,
+      p_metodo_pago: ventaFila.metodo_pago,
+      p_cuenta_id: ventaFila.cuenta_id || null,
+      p_total: ventaFila.total,
+      p_creado_por: creadoPor,
+      p_items: itemsFilas,
+    });
+
+    if (!errRPC) return viaRPC;
+
+    // PGRST202 = PostgREST no encontró la función — la migración todavía no
+    // se aplicó. Cualquier OTRO error (ej. la FK de propietario sin migrar
+    // también) sí se reporta tal cual, igual que antes.
+    const funcionNoExiste = errRPC.code === 'PGRST202' || /crear_venta_completa/i.test(errRPC.message || '');
+    if (!funcionNoExiste) {
+      const esFKPropietario = /foreign key|violates/i.test(errRPC.message || '') && /propietario/i.test(errRPC.message || '');
       if (esFKPropietario) {
         throw new Error('Falta aplicar en Supabase la migración db/migraciones/2026-10-02_ventas-propietario-a-tutores.sql. Mientras tanto, registrá la venta como mostrador.');
       }
-      throw new Error('No se pudo crear la venta: ' + errVenta.message);
+      throw new Error('No se pudo crear la venta: ' + errRPC.message);
     }
 
-    const itemsConVentaId = itemsFilas.map(i => ({ ...i, venta_id: venta.id }));
-    const { error: errItems } = await sb.from('venta_items').insert(itemsConVentaId);
-    if (errItems) throw new Error(`Venta #${venta.id} creada, pero fallaron sus ítems: ` + errItems.message);
-
-    const movimientos = itemsFilas
-      .filter(i => i.tipo === 'producto' && i.producto_id)
-      .map(i => ({
-        producto_id: i.producto_id,
-        cantidad: -Math.abs(i.cantidad),
-        motivo: 'venta',
-        // venta_id (Ciclo 2 de Inventario, 2026-10-03): enlace real además
-        // de la nota de texto — se mantienen los dos; la nota sigue
-        // sirviendo si `venta_id` todavía no existe en Supabase (código
-        // desplegado antes que la migración), y venta_id permite un join
-        // real para el Kardex una vez que la columna exista.
-        venta_id: venta.id,
-        nota: `Venta #${venta.id}`,
-      }));
-    if (movimientos.length) {
-      const { error: errMov } = await sb.from('inventario_movimientos').insert(movimientos);
-      if (errMov) throw new Error(`Venta #${venta.id} y sus ítems quedaron guardados, pero el inventario NO se descontó: ` + errMov.message);
-    }
-
-    return venta;
+    console.warn('[ventas] crear_venta_completa no existe todavía (falta aplicar db/migraciones/2026-10-05_ventas-transaccional.sql) — usando el modo secuencial de respaldo, igual que siempre.');
+    return _ventaCrearSecuencial(sb, { ...ventaFila, propietario_id: propietarioUuid, creado_por: creadoPor }, itemsFilas);
   },
+
 
   // Mismo criterio que anularGasto/anularPago: no se borra, se anula. Y
   // desde 2026-10-02 también DEVUELVE el stock al inventario: antes la venta
@@ -139,6 +129,46 @@ const VentasRepo = {
     return { productosDevueltos: devoluciones.length };
   },
 };
+
+// Camino de respaldo de crearVenta() — el que existía antes de 2026-10-05,
+// sin cambiar su comportamiento: 3 inserts secuenciales, con el mensaje de
+// error específico de en qué paso se quedó si algo falla a mitad de camino.
+// Puede dejar un estado parcial en la base (exactamente la deuda técnica que
+// crear_venta_completa resuelve) — se conserva solo para que la app siga
+// funcionando igual que siempre en cualquier ambiente donde esa migración
+// todavía no se haya aplicado.
+async function _ventaCrearSecuencial(sb, ventaFila, itemsFilas) {
+  const { data: venta, error: errVenta } = await sb.from('ventas')
+    .insert(ventaFila).select().single();
+  if (errVenta) {
+    const esFKPropietario = /foreign key|violates/i.test(errVenta.message || '') &&
+                            /propietario/i.test(errVenta.message || '');
+    if (esFKPropietario) {
+      throw new Error('Falta aplicar en Supabase la migración db/migraciones/2026-10-02_ventas-propietario-a-tutores.sql. Mientras tanto, registrá la venta como mostrador.');
+    }
+    throw new Error('No se pudo crear la venta: ' + errVenta.message);
+  }
+
+  const itemsConVentaId = itemsFilas.map(i => ({ ...i, venta_id: venta.id }));
+  const { error: errItems } = await sb.from('venta_items').insert(itemsConVentaId);
+  if (errItems) throw new Error(`Venta #${venta.id} creada, pero fallaron sus ítems: ` + errItems.message);
+
+  const movimientos = itemsFilas
+    .filter(i => i.tipo === 'producto' && i.producto_id)
+    .map(i => ({
+      producto_id: i.producto_id,
+      cantidad: -Math.abs(i.cantidad),
+      motivo: 'venta',
+      venta_id: venta.id,
+      nota: `Venta #${venta.id}`,
+    }));
+  if (movimientos.length) {
+    const { error: errMov } = await sb.from('inventario_movimientos').insert(movimientos);
+    if (errMov) throw new Error(`Venta #${venta.id} y sus ítems quedaron guardados, pero el inventario NO se descontó: ` + errMov.message);
+  }
+
+  return venta;
+}
 
 // El select de propietario se llena con DB.get('props') (vv_store), así que
 // manda ids tipo 'p1738…'. Pero ventas.propietario_id es uuid y apunta a
