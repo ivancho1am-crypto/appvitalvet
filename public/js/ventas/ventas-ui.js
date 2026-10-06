@@ -129,10 +129,13 @@ function ventaAbrirNueva() {
   document.getElementById('venta-fecha').value = _ventasSoloFecha(new Date());
   document.getElementById('venta-metodo-pago').value = 'efectivo';
 
-  const selProp = document.getElementById('venta-propietario');
-  const props = DB.get('props');
-  selProp.innerHTML = '<option value="">— Mostrador (sin registrar) —</option>' +
-    props.map(p => `<option value="${p.id}">${p.nombre}</option>`).join('');
+  // Buscador de propietario (2026-10-06): antes era un <select> con los
+  // 500+ propietarios cargados de una — con ese volumen, buscar uno a mano
+  // en la lista desplegada era incómodo. Ahora se escribe y aparecen
+  // coincidencias, igual criterio que el buscador global de la topbar.
+  document.getElementById('venta-propietario-buscar').value = '';
+  document.getElementById('venta-propietario').value = '';
+  document.getElementById('venta-propietario-resultados').classList.remove('show');
   ventaActualizarMascotasDelPropietario();   // arranca vacío (sin propietario elegido)
 
   ventaCambiarTipoItem('producto');
@@ -271,6 +274,59 @@ function _ventaRenderItems() {
       <span style="display:flex;align-items:center;gap:8px"><strong>${fmt$(i.subtotal)}</strong>
         <button class="btn btn-outline btn-xs" onclick="ventaQuitarItemDeLista(${idx})">✕</button></span>
     </div>`).join('');
+}
+
+// Buscador de propietario — escribe y aparecen coincidencias (por nombre o
+// cédula), mismo patrón visual que globalSearch() en dashboard.js
+// (.app-search-results/.app-search-row), pero acotado a esta caja: no
+// navega a ningún lado, solo selecciona para esta venta.
+function ventaBuscarPropietario(q) {
+  const el = document.getElementById('venta-propietario-resultados');
+  q = (q || '').trim().toLowerCase();
+  // Sin texto: si ya había un propietario elegido, no reabre la lista con
+  // los 500 — se vuelve a escribir solo si de verdad se quiere cambiar.
+  if (!q) { el.classList.remove('show'); el.innerHTML = ''; return; }
+
+  const props = DB.get('props')
+    .filter(p => p.nombre.toLowerCase().includes(q) || (p.cedula || '').includes(q))
+    .slice(0, 8);   // la lista completa puede tener 500+; 8 coincidencias alcanza para elegir
+
+  if (!props.length) {
+    el.innerHTML = '<div class="app-search-row" style="cursor:default;color:var(--ink-2)">Sin resultados</div>';
+    el.classList.add('show');
+    return;
+  }
+  el.innerHTML = props.map(p => `
+    <div class="app-search-row" onmousedown="ventaSeleccionarPropietario('${p.id}', '${(p.nombre || '').replace(/'/g, "\\'")}')">
+      👤 ${p.nombre}<span class="asr-tag">${p.cedula || ''}</span>
+    </div>`).join('');
+  el.classList.add('show');
+}
+
+// onmousedown (no onclick) en las filas de arriba: dispara ANTES que el
+// onblur del input, que si no se adelantaría y cerraría la lista primero
+// — exactamente el mismo motivo por el que globalSearch() usa onmousedown.
+function ventaSeleccionarPropietario(id, nombre) {
+  document.getElementById('venta-propietario').value = id;
+  document.getElementById('venta-propietario-buscar').value = nombre;
+  document.getElementById('venta-propietario-resultados').classList.remove('show');
+  ventaActualizarMascotasDelPropietario();
+}
+
+// Al perder el foco: si quedó texto escrito que nunca se convirtió en una
+// selección real (se tipeó un nombre pero nunca se hizo clic en ninguna
+// fila), se descarta — mejor una caja vacía y clara que un texto que
+// parece elegido sin estarlo. Si SÍ hay un propietario elegido, se deja
+// tal cual. 150ms de margen para que el onmousedown de arriba alcance a
+// disparar antes de que esto borre la lista.
+function ventaCerrarBusquedaPropietario() {
+  setTimeout(() => {
+    const resultados = document.getElementById('venta-propietario-resultados');
+    if (resultados) resultados.classList.remove('show');
+    if (!document.getElementById('venta-propietario').value) {
+      document.getElementById('venta-propietario-buscar').value = '';
+    }
+  }, 150);
 }
 
 // Mascota opcional: solo tiene sentido si hay un propietario real elegido

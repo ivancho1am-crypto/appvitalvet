@@ -1627,7 +1627,15 @@ VitalVet 🐾</textarea>
     <div class="mh"><div class="mt">🛒 Nueva venta</div><button class="mx" onclick="closeM('m-venta')">✕</button></div>
     <div class="mb">
       <div class="fg">
-        <div class="fi"><label>Propietario</label><select id="venta-propietario" onchange="ventaActualizarMascotasDelPropietario()"></select></div>
+        <div class="fi app-search" style="max-width:none">
+          <label>Propietario</label>
+          <input type="text" id="venta-propietario-buscar" placeholder="🔍 Escribe un nombre o cédula…" autocomplete="off" style="padding-left:12px"
+            oninput="ventaBuscarPropietario(this.value)"
+            onfocus="ventaBuscarPropietario(this.value)"
+            onblur="ventaCerrarBusquedaPropietario()">
+          <input type="hidden" id="venta-propietario">
+          <div class="app-search-results" id="venta-propietario-resultados"></div>
+        </div>
         <div class="fi"><label>Cliente de mostrador</label><input type="text" id="venta-cliente-nombre" placeholder="Si no eliges propietario arriba"></div>
         <div class="fi" id="venta-mascota-wrap" style="display:none"><label>Mascota (opcional)</label><select id="venta-mascota"><option value="">Ninguna</option></select></div>
         <div class="fi"><label>Fecha *</label><input type="date" id="venta-fecha"></div>
