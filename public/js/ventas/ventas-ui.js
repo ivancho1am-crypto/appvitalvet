@@ -133,6 +133,7 @@ function ventaAbrirNueva() {
   const props = DB.get('props');
   selProp.innerHTML = '<option value="">— Mostrador (sin registrar) —</option>' +
     props.map(p => `<option value="${p.id}">${p.nombre}</option>`).join('');
+  ventaActualizarMascotasDelPropietario();   // arranca vacío (sin propietario elegido)
 
   ventaCambiarTipoItem('producto');
   _ventaCargarServicios();
@@ -272,6 +273,24 @@ function _ventaRenderItems() {
     </div>`).join('');
 }
 
+// Mascota opcional: solo tiene sentido si hay un propietario real elegido
+// (de mostrador no se conocen sus mascotas) — se puebla con DB.get('mas')
+// filtrado por pid, mismo origen que usa Mascotas/Marketing.
+function ventaActualizarMascotasDelPropietario() {
+  const propietarioId = document.getElementById('venta-propietario').value;
+  const wrap = document.getElementById('venta-mascota-wrap');
+  const sel = document.getElementById('venta-mascota');
+  if (!propietarioId) {
+    wrap.style.display = 'none';
+    sel.innerHTML = '<option value="">Ninguna</option>';
+    return;
+  }
+  const mascotas = DB.get('mas').filter(m => m.pid === propietarioId);
+  sel.innerHTML = '<option value="">Ninguna</option>' +
+    mascotas.map(m => `<option value="${m.id}">${EI(m.esp)} ${m.nombre}</option>`).join('');
+  wrap.style.display = mascotas.length ? '' : 'none';
+}
+
 async function ventaGuardarCompleta() {
   const { error, venta } = ventaConstruirCabecera({
     propietarioId: document.getElementById('venta-propietario').value,
@@ -280,6 +299,7 @@ async function ventaGuardarCompleta() {
     items: VENTA_ITEMS_ACTUAL,
     metodoPago: document.getElementById('venta-metodo-pago').value,
     cuentaId: document.getElementById('venta-cuenta').value,
+    mascotaId: document.getElementById('venta-mascota').value,
   });
   if (error) { toast(error, 'err'); return; }
 
@@ -296,4 +316,113 @@ async function ventaGuardarCompleta() {
   } finally {
     if (btn) { btn.disabled = false; btn.textContent = '💾 Registrar venta' }
   }
+}
+
+// ── Histórico de ventas (2026-10-06) ───────────────────────────────────────
+// Centro histórico: cualquier rango de fechas (no solo "el día de hoy" como
+// el registro de arriba), con filtros de propietario/mascota/producto/
+// método + búsqueda libre, y los 4 KPIs del período filtrado.
+let VH_FILAS = [];       // histórico aplanado (una fila por ítem) del rango actual, sin filtrar
+let VH_DESDE = null;
+let VH_HASTA = null;
+
+async function ventaAbrirHistorico() {
+  const hoy = new Date();
+  const hace30 = new Date(hoy); hace30.setDate(hace30.getDate() - 30);
+  document.getElementById('vh-f-desde').value = _ventasSoloFecha(hace30);
+  document.getElementById('vh-f-hasta').value = _ventasSoloFecha(hoy);
+  document.getElementById('vh-f-propietario').value = '';
+  document.getElementById('vh-f-mascota').value = '';
+  document.getElementById('vh-f-metodo').value = 'todos';
+  document.getElementById('vh-f-busqueda').value = '';
+  openM('m-venta-historico');
+  await _ventaCargarHistorico();
+}
+
+async function _ventaCargarHistorico() {
+  const cont = document.getElementById('vh-tabla');
+  cont.innerHTML = '<div class="empty-state" style="padding:30px"><div class="empty-s">Cargando…</div></div>';
+  VH_DESDE = document.getElementById('vh-f-desde').value;
+  VH_HASTA = document.getElementById('vh-f-hasta').value;
+  if (!VH_DESDE || !VH_HASTA) return;
+  try {
+    const ventas = await VentasRepo.listarHistorico(VH_DESDE, VH_HASTA);
+    VH_FILAS = ventaAplanarHistorico(ventas);
+  } catch (e) {
+    console.warn('[ventas] historico:', e);
+    VH_FILAS = [];
+    cont.innerHTML = '<div class="empty-state" style="padding:36px"><div class="empty-ic">⚠️</div><div class="empty-t">No se pudo cargar el histórico</div></div>';
+    return;
+  }
+  _ventaPoblarSelectProducto();
+  ventaAplicarFiltrosHistorico();
+}
+
+function _ventaPoblarSelectProducto() {
+  const sel = document.getElementById('vh-f-producto');
+  const valorActual = sel.value;
+  sel.innerHTML = '<option value="todos">Todos</option>' +
+    ventaListaConceptosHistorico(VH_FILAS).map(c => `<option value="${c}">${c}</option>`).join('');
+  if ([...sel.options].some(o => o.value === valorActual)) sel.value = valorActual;
+}
+
+// Si cambia el rango de fechas, hay que volver a pedir datos a Supabase;
+// los demás filtros (propietario/mascota/producto/método/búsqueda) son
+// puramente locales sobre VH_FILAS, ya cargado — mismo criterio que
+// Marketing (cambiar un filtro no dispara red).
+function ventaAplicarFiltrosHistorico() {
+  const desde = document.getElementById('vh-f-desde').value;
+  const hasta = document.getElementById('vh-f-hasta').value;
+  if (desde !== VH_DESDE || hasta !== VH_HASTA) { _ventaCargarHistorico(); return; }
+
+  const filtros = {
+    propietario: document.getElementById('vh-f-propietario').value,
+    mascota: document.getElementById('vh-f-mascota').value,
+    producto: document.getElementById('vh-f-producto').value,
+    metodo: document.getElementById('vh-f-metodo').value,
+    busqueda: document.getElementById('vh-f-busqueda').value,
+  };
+  const filtradas = ventaFiltrarHistorico(VH_FILAS, filtros);
+  _ventaRenderKPIsHistorico(filtradas);
+  _ventaRenderTablaHistorico(filtradas);
+}
+
+function ventaLimpiarFiltrosHistorico() {
+  document.getElementById('vh-f-propietario').value = '';
+  document.getElementById('vh-f-mascota').value = '';
+  document.getElementById('vh-f-producto').value = 'todos';
+  document.getElementById('vh-f-metodo').value = 'todos';
+  document.getElementById('vh-f-busqueda').value = '';
+  ventaAplicarFiltrosHistorico();
+}
+
+function _ventaRenderKPIsHistorico(filasFiltradas) {
+  const k = ventaCalcularKPIsHistorico(filasFiltradas, VH_DESDE, VH_HASTA);
+  document.getElementById('vh-kpi-total').textContent = fmt$(k.total);
+  document.getElementById('vh-kpi-cantidad').textContent = k.cantidad;
+  document.getElementById('vh-kpi-ticket').textContent = fmt$(k.ticketPromedio);
+  document.getElementById('vh-kpi-diario').textContent = fmt$(k.promedioDiario);
+}
+
+function _ventaRenderTablaHistorico(filasFiltradas) {
+  const cont = document.getElementById('vh-tabla');
+  if (!filasFiltradas.length) {
+    cont.innerHTML = '<div class="empty-state" style="padding:30px"><div class="empty-ic">🛒</div><div class="empty-t">Sin ventas con estos filtros</div></div>';
+    return;
+  }
+  // Más reciente primero — igual criterio que el registro diario.
+  const ordenadas = [...filasFiltradas].sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+  cont.innerHTML = `<div class="tw"><table>
+    <thead><tr><th>Fecha</th><th>Hora</th><th>Propietario</th><th>Mascota</th><th>Concepto</th><th>Valor</th><th>Método</th></tr></thead>
+    <tbody>${ordenadas.map(f => `
+      <tr style="${f.anulado ? 'opacity:.5' : ''}">
+        <td style="white-space:nowrap">${new Date(f.fecha + 'T00:00:00').toLocaleDateString('es-CO')}</td>
+        <td>${f.createdAt ? new Date(f.createdAt).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' }) : '—'}</td>
+        <td>${f.propietarioNombre}${f.anulado ? ' <span style="font-size:10px;color:var(--g500)">(ANULADA)</span>' : ''}</td>
+        <td>${f.mascotaNombre || '—'}</td>
+        <td>${f.concepto}</td>
+        <td><strong>${fmt$(f.valor)}</strong></td>
+        <td style="font-size:11px">${VENTA_METODOS_PAGO[f.metodoPago] || f.metodoPago || ''}</td>
+      </tr>`).join('')}</tbody>
+  </table></div>`;
 }

@@ -1108,7 +1108,10 @@ try { if(Object.keys(localStorage).some(k=>k.startsWith('sb-')&&k.includes('auth
     <div class="page vv-ventas" id="page-ventas">
       <div class="sec-hdr">
         <div><div class="sec-title">🛒 Ventas — registro diario</div></div>
-        <button class="btn btn-green" onclick="ventaAbrirNueva()">+ Nueva venta</button>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-outline" onclick="ventaAbrirHistorico()">📋 Ver todas las ventas</button>
+          <button class="btn btn-green" onclick="ventaAbrirNueva()">+ Nueva venta</button>
+        </div>
       </div>
       <div class="ag-toolbar">
         <div class="ag-nav-dia">
@@ -1624,8 +1627,9 @@ VitalVet 🐾</textarea>
     <div class="mh"><div class="mt">🛒 Nueva venta</div><button class="mx" onclick="closeM('m-venta')">✕</button></div>
     <div class="mb">
       <div class="fg">
-        <div class="fi"><label>Propietario</label><select id="venta-propietario"></select></div>
+        <div class="fi"><label>Propietario</label><select id="venta-propietario" onchange="ventaActualizarMascotasDelPropietario()"></select></div>
         <div class="fi"><label>Cliente de mostrador</label><input type="text" id="venta-cliente-nombre" placeholder="Si no eliges propietario arriba"></div>
+        <div class="fi" id="venta-mascota-wrap" style="display:none"><label>Mascota (opcional)</label><select id="venta-mascota"><option value="">Ninguna</option></select></div>
         <div class="fi"><label>Fecha *</label><input type="date" id="venta-fecha"></div>
         <div class="fi"><label>Método de pago *</label>
           <select id="venta-metodo-pago">
@@ -1682,6 +1686,50 @@ VitalVet 🐾</textarea>
       <button class="btn btn-outline" onclick="closeM('m-venta')">Cancelar</button>
       <button class="btn btn-green" id="venta-save-btn" onclick="ventaGuardarCompleta()">💾 Registrar venta</button>
     </div>
+  </div>
+</div>
+
+<!-- HISTÓRICO DE VENTAS (2026-10-06) -->
+<div class="mo vv-ventas" id="m-venta-historico">
+  <div class="md md-lg" style="max-width:980px">
+    <div class="mh"><div class="mt">📋 Histórico de ventas</div><button class="mx" onclick="closeM('m-venta-historico')">✕</button></div>
+    <div class="mb">
+      <div class="fg" style="margin-bottom:4px">
+        <div class="fi"><label>Desde</label><input type="date" id="vh-f-desde" onchange="ventaAplicarFiltrosHistorico()"></div>
+        <div class="fi"><label>Hasta</label><input type="date" id="vh-f-hasta" onchange="ventaAplicarFiltrosHistorico()"></div>
+        <div class="fi"><label>Propietario</label><input type="text" id="vh-f-propietario" placeholder="Buscar nombre…" oninput="ventaAplicarFiltrosHistorico()"></div>
+        <div class="fi"><label>Mascota</label><input type="text" id="vh-f-mascota" placeholder="Buscar nombre…" oninput="ventaAplicarFiltrosHistorico()"></div>
+        <div class="fi"><label>Producto/servicio</label><select id="vh-f-producto" onchange="ventaAplicarFiltrosHistorico()"><option value="todos">Todos</option></select></div>
+        <div class="fi"><label>Método de pago</label>
+          <select id="vh-f-metodo" onchange="ventaAplicarFiltrosHistorico()">
+            <option value="todos">Todos</option>
+            <option value="efectivo">Efectivo</option>
+            <option value="transferencia">Transferencia</option>
+            <option value="tarjeta">Tarjeta</option>
+            <option value="otro">Otro</option>
+          </select></div>
+        <div class="fi ff"><label>Búsqueda</label><input type="text" id="vh-f-busqueda" placeholder="Propietario, mascota o concepto…" oninput="ventaAplicarFiltrosHistorico()"></div>
+        <div class="fi"><label>&nbsp;</label><button class="btn btn-outline btn-sm" style="width:100%" onclick="ventaLimpiarFiltrosHistorico()">↺ Limpiar filtros</button></div>
+      </div>
+
+      <div class="kpi-row" style="grid-template-columns:repeat(4,1fr);margin:14px 0">
+        <div class="kpi-card" style="--c:var(--green)">
+          <div class="kc-ic">💰</div><div class="kc-val" id="vh-kpi-total">$ 0</div><div class="kc-lbl">Ventas del período</div>
+        </div>
+        <div class="kpi-card" style="--c:var(--brand)">
+          <div class="kc-ic">🧾</div><div class="kc-val" id="vh-kpi-cantidad">0</div><div class="kc-lbl">Número de ventas</div>
+        </div>
+        <div class="kpi-card" style="--c:#0071e2">
+          <div class="kc-ic">🎫</div><div class="kc-val" id="vh-kpi-ticket">$ 0</div><div class="kc-lbl">Ticket promedio</div>
+        </div>
+        <div class="kpi-card" style="--c:#ff9800">
+          <div class="kc-ic">📈</div><div class="kc-val" id="vh-kpi-diario">$ 0</div><div class="kc-lbl">Promedio diario</div>
+        </div>
+      </div>
+
+      <div id="vh-tabla"></div>
+    </div>
+    <div class="mf"><button class="btn btn-outline" onclick="closeM('m-venta-historico')">Cerrar</button></div>
   </div>
 </div>
 

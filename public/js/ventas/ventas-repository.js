@@ -48,7 +48,12 @@ const VentasRepo = {
     const propietarioUuid = await _ventaResolverTutorId(sb, ventaFila.propietario_id);
     const creadoPor = ventaFila.creado_por || correo;
 
-    const { data: viaRPC, error: errRPC } = await sb.rpc('crear_venta_completa', {
+    // Mascota (2026-10-06): opcional, best-effort — si no resuelve, la
+    // venta se guarda igual sin mascota_id, nunca se bloquea por un dato
+    // que no es obligatorio (distinto criterio que el propietario arriba).
+    const mascotaUuid = ventaFila.mascota_id ? await _ventaResolverMascotaId(sb, ventaFila.mascota_id) : null;
+
+    const rpcParams = {
       p_propietario_id: propietarioUuid,
       p_cliente_nombre: ventaFila.cliente_nombre || null,
       p_fecha: ventaFila.fecha,
@@ -57,7 +62,16 @@ const VentasRepo = {
       p_total: ventaFila.total,
       p_creado_por: creadoPor,
       p_items: itemsFilas,
-    });
+    };
+    // Solo se agrega si hay mascota: así las ventas SIN mascota (la mayoría)
+    // siguen llamando la función con la firma de 8 parámetros de siempre y
+    // mantienen el camino atómico aunque la migración de mascota_id
+    // (2026-10-06_ventas-mascota-e-historico.sql) todavía no se haya
+    // aplicado — solo una venta CON mascota caería al respaldo mientras
+    // tanto, nunca todas.
+    if (mascotaUuid) rpcParams.p_mascota_id = mascotaUuid;
+
+    const { data: viaRPC, error: errRPC } = await sb.rpc('crear_venta_completa', rpcParams);
 
     if (!errRPC) return viaRPC;
 
@@ -74,7 +88,46 @@ const VentasRepo = {
     }
 
     console.warn('[ventas] crear_venta_completa no existe todavía (falta aplicar db/migraciones/2026-10-05_ventas-transaccional.sql) — usando el modo secuencial de respaldo, igual que siempre.');
-    return _ventaCrearSecuencial(sb, { ...ventaFila, propietario_id: propietarioUuid, creado_por: creadoPor }, itemsFilas);
+    const ventaParaSecuencial = { ...ventaFila, propietario_id: propietarioUuid, creado_por: creadoPor };
+    if (mascotaUuid) ventaParaSecuencial.mascota_id = mascotaUuid; else delete ventaParaSecuencial.mascota_id;
+    return _ventaCrearSecuencial(sb, ventaParaSecuencial, itemsFilas);
+  },
+
+  // Histórico completo (2026-10-06) — a diferencia de listarVentas (pensado
+  // para "el día que estoy viendo"), este trae cualquier rango y además
+  // resuelve propietario_nombre/mascota_nombre en 2 consultas extra, para
+  // no tener que ir a Supabase de nuevo por cada fila al pintar la tabla.
+  // mascota_nombre queda vacío con gracia si la columna/tabla todavía no
+  // tiene datos — nunca rompe el histórico.
+  async listarHistorico(desdeFecha, hastaFecha) {
+    const sb = getSB(); if (!sb) return [];
+    const { data: ventas, error } = await sb.from('ventas').select('*')
+      .gte('fecha', desdeFecha).lte('fecha', hastaFecha)
+      .order('fecha', { ascending: false }).order('created_at', { ascending: false });
+    if (error) { console.warn('[ventas] listarHistorico:', error.message); return []; }
+    if (!ventas || !ventas.length) return [];
+
+    const ids = ventas.map(v => v.id);
+    const { data: items, error: errItems } = await sb.from('venta_items').select('*').in('venta_id', ids);
+    if (errItems) console.warn('[ventas] listarHistorico (items):', errItems.message);
+    const itemsPorVenta = {};
+    (items || []).forEach(i => { (itemsPorVenta[i.venta_id] = itemsPorVenta[i.venta_id] || []).push(i) });
+
+    const idsPropietarios = [...new Set(ventas.map(v => v.propietario_id).filter(Boolean))];
+    const idsMascotas = [...new Set(ventas.map(v => v.mascota_id).filter(Boolean))];
+    const [tutoresRes, pacientesRes] = await Promise.all([
+      idsPropietarios.length ? sb.from('tutores').select('id, nombre').in('id', idsPropietarios) : Promise.resolve({ data: [] }),
+      idsMascotas.length ? sb.from('pacientes').select('id, nombre').in('id', idsMascotas) : Promise.resolve({ data: [] }),
+    ]);
+    const nombrePropietario = {}; (tutoresRes.data || []).forEach(t => { nombrePropietario[t.id] = t.nombre });
+    const nombreMascota = {}; (pacientesRes.data || []).forEach(p => { nombreMascota[p.id] = p.nombre });
+
+    return ventas.map(v => ({
+      ...v,
+      items: itemsPorVenta[v.id] || [],
+      propietario_nombre: v.cliente_nombre || nombrePropietario[v.propietario_id] || null,
+      mascota_nombre: v.mascota_id ? (nombreMascota[v.mascota_id] || null) : null,
+    }));
   },
 
 
@@ -138,8 +191,19 @@ const VentasRepo = {
 // funcionando igual que siempre en cualquier ambiente donde esa migración
 // todavía no se haya aplicado.
 async function _ventaCrearSecuencial(sb, ventaFila, itemsFilas) {
-  const { data: venta, error: errVenta } = await sb.from('ventas')
+  let { data: venta, error: errVenta } = await sb.from('ventas')
     .insert(ventaFila).select().single();
+
+  // La columna mascota_id es nueva (2026-10-06) y puede no existir todavía
+  // en este Supabase. Un INSERT que la mencione (aunque sea con un valor,
+  // no null) falla igual si la columna no existe — se reintenta sin ella en
+  // vez de perder la venta entera por un dato opcional.
+  if (errVenta && ventaFila.mascota_id && /column .*mascota_id.* does not exist/i.test(errVenta.message || '')) {
+    console.warn('[ventas] columna mascota_id no existe todavía (falta aplicar db/migraciones/2026-10-06_ventas-mascota-e-historico.sql) — guardando la venta sin ese dato.');
+    const { mascota_id, ...sinMascota } = ventaFila;
+    ({ data: venta, error: errVenta } = await sb.from('ventas').insert(sinMascota).select().single());
+  }
+
   if (errVenta) {
     const esFKPropietario = /foreign key|violates/i.test(errVenta.message || '') &&
                             /propietario/i.test(errVenta.message || '');
@@ -187,6 +251,23 @@ async function _ventaResolverTutorId(sb, propietarioId) {
     throw new Error('Ese propietario todavía no llegó a la base relacional. Entrá a Inicio → "🔗 Espejo relacional" → Verificar ahora → Reparar, y volvé a intentar la venta.');
   }
   return data.id;
+}
+
+// Igual patrón que _ventaResolverTutorId, pero para la mascota opcional
+// (2026-10-06): traduce el id local de vv_store ('m1738…') al uuid real en
+// `pacientes` vía pacientes.saas_mas_id. A diferencia del propietario, acá
+// NUNCA se bloquea la venta si no resuelve — es un dato opcional, no la
+// identidad del cliente.
+async function _ventaResolverMascotaId(sb, mascotaId) {
+  if (!mascotaId) return null;
+  if (_RE_UUID.test(mascotaId)) return mascotaId;
+  try {
+    const { data, error } = await sb.from('pacientes')
+      .select('id').eq('saas_mas_id', mascotaId).maybeSingle();
+    if (error) { console.warn('[ventas] no se pudo resolver la mascota:', error.message); return null; }
+    if (!data) { console.warn('[ventas] mascota todavía no espejada:', mascotaId); return null; }
+    return data.id;
+  } catch (e) { console.warn('[ventas] _ventaResolverMascotaId:', e.message); return null; }
 }
 
 // Mismo patrón que _finUsuarioActual (finanzas-repository.js) y _rSaludo

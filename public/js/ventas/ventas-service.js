@@ -52,7 +52,7 @@ function ventaConstruirItem({ tipo, productoId, nombre, cantidad, precioUnitario
 // identificado de alguna forma (propietario real o nombre de mostrador),
 // y método de pago (toda venta se registra ya cobrada). `cuentaId` es
 // opcional: no bloquea el registro si todavía no hay cuentas creadas.
-function ventaConstruirCabecera({ propietarioId, clienteNombre, fecha, items, metodoPago, cuentaId }) {
+function ventaConstruirCabecera({ propietarioId, clienteNombre, fecha, items, metodoPago, cuentaId, mascotaId }) {
   if (!items || !items.length) return { error: 'Agrega al menos un ítem a la venta' };
   if (!propietarioId && !(clienteNombre || '').trim()) {
     return { error: 'Selecciona un propietario o escribe un nombre de mostrador' };
@@ -60,16 +60,21 @@ function ventaConstruirCabecera({ propietarioId, clienteNombre, fecha, items, me
   if (!fecha) return { error: 'Selecciona una fecha' };
   if (!metodoPago || !VENTA_METODOS_PAGO[metodoPago]) return { error: 'Selecciona un método de pago' };
   const total = items.reduce((s, i) => s + (parseFloat(i.subtotal) || 0), 0);
-  return {
-    venta: {
-      propietario_id: propietarioId || null,
-      cliente_nombre: propietarioId ? null : clienteNombre.trim(),
-      fecha,
-      metodo_pago: metodoPago,
-      cuenta_id: cuentaId || null,
-      total: Math.round(total * 100) / 100,
-    }
+  const venta = {
+    propietario_id: propietarioId || null,
+    cliente_nombre: propietarioId ? null : clienteNombre.trim(),
+    fecha,
+    metodo_pago: metodoPago,
+    cuenta_id: cuentaId || null,
+    total: Math.round(total * 100) / 100,
   };
+  // mascota_id SOLO se incluye si hay una mascota elegida. La columna es
+  // nueva (2026-10-06) y puede todavía no existir en Supabase — si no se
+  // manda la clave, ventas-repository.js nunca la menciona en el insert y
+  // el guardado funciona igual exista o no esa columna. Ver el manejo de
+  // "columna no existe todavía" en VentasRepo._ventaCrearSecuencial.
+  if (mascotaId) venta.mascota_id = mascotaId;
+  return { venta };
 }
 
 // Agrega un servicio nuevo al catálogo compartido con Cotizaciones
@@ -90,4 +95,76 @@ function ventaAgregarServicioAlCatalogo({ nombre, cat, precio }) {
   procs.push(nuevo);
   DB.set('procs', procs);
   return { proc: nuevo };
+}
+
+// ── Histórico de ventas (2026-10-06) — funciones puras ────────────────────
+// Nada de DOM, nada de Supabase: VentasRepo.listarHistorico() ya entrega
+// cada venta con propietario_nombre/mascota_nombre resueltos (no uuids) —
+// acá solo se aplana a filas por ítem, se filtra y se calculan los KPIs.
+
+// Una fila por ítem, no por venta: dos ventas con 2 ítems cada una dan 4
+// filas. Es la unidad que pinta la tabla y la que filtra "producto/servicio"
+// — mismo criterio que pidió Iván en el mockup (cada concepto, su propia
+// fila con su propio valor).
+function ventaAplanarHistorico(ventas) {
+  const filas = [];
+  (ventas || []).forEach(v => {
+    (v.items || []).forEach(i => {
+      filas.push({
+        ventaId: v.id,
+        fecha: v.fecha,
+        createdAt: v.created_at,
+        propietarioNombre: v.propietario_nombre || 'Mostrador',
+        mascotaNombre: v.mascota_nombre || '',
+        concepto: i.nombre,
+        valor: parseFloat(i.subtotal) || 0,
+        metodoPago: v.metodo_pago,
+        anulado: !!v.anulado,
+      });
+    });
+  });
+  return filas;
+}
+
+// Texto vacío en un filtro = no filtra por ese campo. Los de texto son
+// "contiene", sin mayúsculas/minúsculas — a esta escala (decenas/cientos de
+// filas) no hace falta nada más fino.
+function ventaFiltrarHistorico(filas, { propietario, mascota, producto, metodo, busqueda } = {}) {
+  const prop = (propietario || '').trim().toLowerCase();
+  const masc = (mascota || '').trim().toLowerCase();
+  const q = (busqueda || '').trim().toLowerCase();
+  return filas.filter(f => {
+    if (prop && !f.propietarioNombre.toLowerCase().includes(prop)) return false;
+    if (masc && !f.mascotaNombre.toLowerCase().includes(masc)) return false;
+    if (producto && producto !== 'todos' && f.concepto !== producto) return false;
+    if (metodo && metodo !== 'todos' && f.metodoPago !== metodo) return false;
+    if (q) {
+      const texto = `${f.propietarioNombre} ${f.mascotaNombre} ${f.concepto}`.toLowerCase();
+      if (!texto.includes(q)) return false;
+    }
+    return true;
+  });
+}
+
+// Lista de conceptos distintos presentes en las filas — para poblar el
+// <select> de "Producto/servicio", siempre acotada a lo que realmente
+// existe en el rango cargado (nunca una lista fija que se desactualice).
+function ventaListaConceptosHistorico(filas) {
+  return [...new Set((filas || []).map(f => f.concepto).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'es'));
+}
+
+// KPIs del período FILTRADO (no del total sin filtrar): si Iván filtra por
+// un producto puntual, "Ventas del período" debe sumar solo esas filas, no
+// el total de todas las ventas que de casualidad también tengan ese ítem.
+// Las anuladas se excluyen siempre (mismo criterio que ventaCalcularResumen
+// del widget del día) — se siguen viendo en la tabla, marcadas, pero no
+// cuentan como ingreso.
+function ventaCalcularKPIsHistorico(filasFiltradas, desdeFecha, hastaFecha) {
+  const activas = (filasFiltradas || []).filter(f => !f.anulado);
+  const total = activas.reduce((s, f) => s + f.valor, 0);
+  const cantidad = new Set(activas.map(f => f.ventaId)).size;
+  const ticketPromedio = cantidad ? total / cantidad : 0;
+  const dias = Math.max(1, Math.round((new Date(hastaFecha) - new Date(desdeFecha)) / 86400000) + 1);
+  const promedioDiario = total / dias;
+  return { total, cantidad, ticketPromedio, promedioDiario };
 }
