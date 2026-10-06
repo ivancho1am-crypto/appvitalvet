@@ -222,12 +222,150 @@ async function _actualizarBadge() {
 }
 
 // ── Modal "Nueva cita" ─────────────────────────────────────────────────────
+let AG_TIPO_CLIENTE = 'registrado';   // 'registrado' | 'nuevo' — estado del toggle del modal
+
 function agAbrirNuevaCita() {
   openM('m-cita');
   const hoy = new Date();
   document.getElementById('ag-fecha').value =
     `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}-${String(hoy.getDate()).padStart(2, '0')}T${String(hoy.getHours()).padStart(2, '0')}:00`;
   document.getElementById('ag-info-mascota').innerHTML = '';
+
+  document.getElementById('ag-tutor-buscar').value = '';
+  document.getElementById('ag-tutor-filtro').value = '';
+  document.getElementById('ag-mas-buscar').value = '';
+  document.getElementById('ag-mas').value = '';
+  document.getElementById('ag-tutor-resultados').classList.remove('show');
+  document.getElementById('ag-mas-resultados').classList.remove('show');
+
+  document.getElementById('ag-nuevo-tutor').value = '';
+  document.getElementById('ag-nuevo-telefono').value = '';
+  document.getElementById('ag-nuevo-mascota').value = '';
+  document.getElementById('ag-nuevo-especie').value = 'canino';
+
+  agCambiarTipoCliente('registrado');
+}
+
+// Toggle "Cliente registrado" / "Cliente nuevo" — igual patrón que
+// ventaCambiarTipoItem (Ventas): clases .ftab/.on en los botones, un wrap
+// visible a la vez. No borra lo ya escrito al cambiar de pestaña — por si
+// se tocó por error, no se pierde lo tecleado.
+function agCambiarTipoCliente(tipo) {
+  AG_TIPO_CLIENTE = tipo;
+  document.querySelectorAll('[data-tipo-cliente]').forEach(b => b.classList.toggle('on', b.dataset.tipoCliente === tipo));
+  document.getElementById('ag-cliente-registrado-wrap').style.display = tipo === 'registrado' ? '' : 'none';
+  document.getElementById('ag-cliente-nuevo-wrap').style.display = tipo === 'nuevo' ? '' : 'none';
+}
+
+// ── Buscador de tutor — mismo patrón que Ventas (ver ventaBuscarPropietario) ──
+// Acá es solo un filtro de ayuda para encontrar la mascota más rápido: no
+// guarda nada por sí solo, lo que de verdad importa para guardar la cita es
+// la mascota elegida abajo (ver agSeleccionarMascota).
+function agBuscarTutor(q) {
+  const el = document.getElementById('ag-tutor-resultados');
+  q = (q || '').trim().toLowerCase();
+  if (!q) { el.classList.remove('show'); el.innerHTML = ''; return; }
+  const props = DB.get('props')
+    .filter(p => p.nombre.toLowerCase().includes(q) || (p.cedula || '').includes(q))
+    .slice(0, 8);
+  if (!props.length) {
+    el.innerHTML = '<div class="app-search-row" style="cursor:default;color:var(--ink-2)">Sin resultados</div>';
+    el.classList.add('show');
+    return;
+  }
+  el.innerHTML = props.map(p => `
+    <div class="app-search-row" onmousedown="agSeleccionarTutor('${p.id}', '${(p.nombre || '').replace(/'/g, "\\'")}')">
+      👤 ${p.nombre}<span class="asr-tag">${p.cedula || ''}</span>
+    </div>`).join('');
+  el.classList.add('show');
+}
+
+// Elegir un tutor NO fija nada para guardar — solo deja el buscador de
+// mascota mostrando de una vez sus mascotas (sin tener que escribir),
+// igual que antes hacía el <select> dependiente de Ventas.
+function agSeleccionarTutor(id, nombre) {
+  document.getElementById('ag-tutor-filtro').value = id;
+  document.getElementById('ag-tutor-buscar').value = nombre;
+  document.getElementById('ag-tutor-resultados').classList.remove('show');
+  // Cambiar de tutor invalida cualquier mascota ya elegida de OTRO dueño.
+  document.getElementById('ag-mas').value = '';
+  document.getElementById('ag-mas-buscar').value = '';
+  document.getElementById('ag-info-mascota').innerHTML = '';
+  agBuscarMascota('');   // muestra de una vez las mascotas de este tutor
+}
+
+function agCerrarBusquedaTutor() {
+  setTimeout(() => {
+    const resultados = document.getElementById('ag-tutor-resultados');
+    if (resultados) resultados.classList.remove('show');
+    // A diferencia de Ventas, acá NO se borra el texto si no hay selección
+    // "oficial": el tutor es solo un filtro de ayuda, puede quedar texto
+    // escrito sin que eso rompa nada — lo que realmente guarda la cita es
+    // la mascota (ver abajo).
+  }, 150);
+}
+
+// Buscador de mascota — doble entrada: si hay un tutor elegido arriba y el
+// campo está vacío, muestra DE UNA sus mascotas (sin escribir nada); si se
+// escribe algo, busca por nombre en TODAS las mascotas (por si se recuerda
+// el nombre de la mascota pero no el del tutor) — el tutor de cada
+// resultado se muestra como tag, igual que la cédula en Ventas.
+function agBuscarMascota(q) {
+  const el = document.getElementById('ag-mas-resultados');
+  q = (q || '').trim().toLowerCase();
+  const tutorFiltroId = document.getElementById('ag-tutor-filtro').value;
+  const props = DB.get('props');
+  const nombrePropietario = id => { const p = props.find(x => x.id === id); return p ? p.nombre : ''; };
+
+  let candidatas;
+  if (!q && tutorFiltroId) {
+    candidatas = DB.get('mas').filter(m => m.pid === tutorFiltroId);
+  } else if (!q) {
+    el.classList.remove('show'); el.innerHTML = ''; return;
+  } else {
+    candidatas = DB.get('mas').filter(m => m.nombre.toLowerCase().includes(q)).slice(0, 8);
+  }
+
+  if (!candidatas.length) {
+    el.innerHTML = '<div class="app-search-row" style="cursor:default;color:var(--ink-2)">Sin resultados</div>';
+    el.classList.add('show');
+    return;
+  }
+  el.innerHTML = candidatas.map(m => `
+    <div class="app-search-row" onmousedown="agSeleccionarMascota('${m.id}')">
+      ${EI(m.esp)} ${m.nombre}<span class="asr-tag">${nombrePropietario(m.pid)}</span>
+    </div>`).join('');
+  el.classList.add('show');
+}
+
+// Elegir una mascota es lo que de verdad fija la cita: además de guardar su
+// id, vuelve a escribir el tutor real como texto (por si se llegó acá
+// buscando directo por el nombre de la mascota, sin pasar por el buscador
+// de tutor) — así el par tutor/mascota que se ve en pantalla SIEMPRE es
+// consistente con lo que se va a guardar.
+function agSeleccionarMascota(id) {
+  const m = DB.get('mas').find(x => x.id === id);
+  if (!m) { toast('Esa mascota ya no está en la lista — intenta de nuevo', 'err'); return; }
+  const prop = DB.get('props').find(p => p.id === m.pid);
+  document.getElementById('ag-mas').value = id;
+  document.getElementById('ag-mas-buscar').value = m.nombre;
+  document.getElementById('ag-tutor-filtro').value = m.pid;
+  document.getElementById('ag-tutor-buscar').value = prop ? prop.nombre : '';
+  document.getElementById('ag-mas-resultados').classList.remove('show');
+  agMascotaSeleccionada();
+}
+
+function agCerrarBusquedaMascota() {
+  setTimeout(() => {
+    const resultados = document.getElementById('ag-mas-resultados');
+    if (resultados) resultados.classList.remove('show');
+    // Acá SÍ se limpia si no hay una mascota realmente elegida: a
+    // diferencia del tutor (que es solo un filtro), el texto de mascota sin
+    // selección real parecería una cita a medio llenar.
+    if (!document.getElementById('ag-mas').value) {
+      document.getElementById('ag-mas-buscar').value = '';
+    }
+  }, 150);
 }
 
 // Al elegir la mascota: mostrar última consulta/procedimiento, como pidió
@@ -251,15 +389,16 @@ function agMascotaSeleccionada() {
 }
 
 async function agGuardarCita() {
-  const mascotaId = document.getElementById('ag-mas').value;
   const servicio = document.getElementById('ag-servicio').value;
   const fechaHora = document.getElementById('ag-fecha').value;
   const duracion = document.getElementById('ag-duracion').value;
   const motivo = document.getElementById('ag-motivo').value;
+  const registrado = AG_TIPO_CLIENTE === 'registrado';
+  const mascotaId = registrado ? document.getElementById('ag-mas').value : null;
 
   // Valida lo obligatorio antes de consultar Supabase (resolverEnlace):
   // así un campo vacío no gasta una petición de red de entrada.
-  if (!mascotaId) { toast('Selecciona una mascota', 'err'); return; }
+  if (registrado && !mascotaId) { toast('Busca y selecciona una mascota', 'err'); return; }
   if (!fechaHora) { toast('Selecciona fecha y hora', 'err'); return; }
   if (!servicio) { toast('Selecciona un servicio', 'err'); return; }
 
@@ -267,15 +406,28 @@ async function agGuardarCita() {
   if (btn) { btn.disabled = true; btn.textContent = 'Guardando…'; }
 
   try {
-    const { pacienteId, tutorId } = await AgendaRepo.resolverEnlace(mascotaId);
-    const { error, fila } = agConstruirFila({ mascotaId, servicio, fechaHora, duracion, motivo, pacienteId, tutorId });
+    const { pacienteId, tutorId } = registrado
+      ? await AgendaRepo.resolverEnlace(mascotaId)
+      : { pacienteId: null, tutorId: null };
+
+    const { error, fila } = agConstruirFila({
+      registrado, mascotaId, pacienteId, tutorId, servicio, fechaHora, duracion, motivo,
+      tutorNombreLibre: document.getElementById('ag-nuevo-tutor').value,
+      telefonoLibre: document.getElementById('ag-nuevo-telefono').value,
+      mascotaNombreLibre: document.getElementById('ag-nuevo-mascota').value,
+      especieLibre: document.getElementById('ag-nuevo-especie').value,
+    });
 
     if (error) { toast(error, 'err'); return; }
 
     await AgendaRepo.crear(fila);
     toast('Cita agendada ✓', 'ok');
     closeM('m-cita');
-    ['ag-mas', 'ag-servicio', 'ag-motivo'].forEach(id => { const e = document.getElementById(id); if (e) e.value = ''; });
+    ['ag-servicio', 'ag-motivo'].forEach(id => { const e = document.getElementById(id); if (e) e.value = ''; });
+    document.getElementById('ag-mas').value = '';
+    document.getElementById('ag-mas-buscar').value = '';
+    document.getElementById('ag-tutor-filtro').value = '';
+    document.getElementById('ag-tutor-buscar').value = '';
     document.getElementById('ag-info-mascota').innerHTML = '';
     rAgenda();
   } catch (e) {

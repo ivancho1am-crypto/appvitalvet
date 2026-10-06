@@ -34,31 +34,58 @@ function agRangoDia(fecha) {
 
 // Arma la fila lista para guardar. `pacienteId`/`tutorId` ya vienen resueltos
 // (AgendaRepo.resolverEnlace, en agenda-ui.js) porque esa resolución necesita
-// una consulta a Supabase y esta capa no toca la red. Valida lo mínimo:
-// mascota, fecha/hora y servicio.
-function agConstruirFila({ mascotaId, servicio, fechaHora, duracion, motivo, pacienteId, tutorId }) {
-  if (!mascotaId) return { error: 'Selecciona una mascota' };
+// una consulta a Supabase y esta capa no toca la red.
+//
+// Dos modos (2026-10-06, pedido de Iván) — `citas` ya tenía las columnas de
+// texto libre (tutor_name/phone/mascota_nombre/mascota_especie) para esto,
+// nadie las usaba todavía porque la UI exigía una mascota ya registrada:
+//   registrado=true  -> mascotaId apunta a una mascota real de vv_store,
+//                       igual que siempre (nombre/teléfono se copian del
+//                       propietario real).
+//   registrado=false -> "cliente nuevo, no registrado" — tutorNombreLibre/
+//                       mascotaNombreLibre/etc. son texto escrito a mano.
+//                       paciente_id/tutor_id quedan null (no hay con qué
+//                       enlazar todavía): la cita existe igual, sin
+//                       historia clínica asociada hasta que se registre.
+function agConstruirFila({ registrado, mascotaId, tutorNombreLibre, telefonoLibre, mascotaNombreLibre, especieLibre,
+                            servicio, fechaHora, duracion, motivo, pacienteId, tutorId }) {
   if (!fechaHora) return { error: 'Selecciona fecha y hora' };
   if (!servicio) return { error: 'Selecciona un servicio' };
 
-  const mas = DB.get('mas').find(m => m.id === mascotaId);
-  if (!mas) return { error: 'Mascota no encontrada' };
-  const prop = DB.get('props').find(p => p.id === mas.pid);
+  let mascotaNombre, mascotaEspecie, tutorNombre, telefono, mascotaLocal = null;
+
+  if (registrado) {
+    if (!mascotaId) return { error: 'Busca y selecciona una mascota' };
+    const mas = DB.get('mas').find(m => m.id === mascotaId);
+    if (!mas) return { error: 'Mascota no encontrada' };
+    const prop = DB.get('props').find(p => p.id === mas.pid);
+    mascotaNombre = mas.nombre; mascotaEspecie = mas.esp;
+    tutorNombre = prop ? prop.nombre : null; telefono = prop ? prop.telefono : null;
+    mascotaLocal = mas;
+  } else {
+    if (!(tutorNombreLibre || '').trim()) return { error: 'Escribe el nombre del tutor' };
+    if (!(mascotaNombreLibre || '').trim()) return { error: 'Escribe el nombre de la mascota' };
+    tutorNombre = tutorNombreLibre.trim();
+    telefono = (telefonoLibre || '').trim() || null;
+    mascotaNombre = mascotaNombreLibre.trim();
+    mascotaEspecie = especieLibre || null;
+  }
 
   return {
     // Ojo: `fila` nunca incluye `estado` a propósito — así, sea cual sea el
     // default real de esa columna en Supabase (cambió más de una vez durante
     // el desarrollo), esta función no lo pisa ni necesita saberlo.
     fila: {
-      paciente_id: pacienteId || null, tutor_id: tutorId || null,
-      mascota_nombre: mas.nombre, mascota_especie: mas.esp,
-      tutor_name: prop ? prop.nombre : null, phone: prop ? prop.telefono : null,
+      paciente_id: registrado ? (pacienteId || null) : null,
+      tutor_id: registrado ? (tutorId || null) : null,
+      mascota_nombre: mascotaNombre, mascota_especie: mascotaEspecie,
+      tutor_name: tutorNombre, phone: telefono,
       servicio: AG_SERVICIOS[servicio] || servicio,
       fecha_hora: new Date(fechaHora).toISOString(),
       duracion_min: parseInt(duracion, 10) || 30,
       notas: (motivo || '').trim() || null,
     },
-    mascotaLocal: mas,   // para poder enlazar con historia.js sin otra consulta
+    mascotaLocal,   // para poder enlazar con historia.js sin otra consulta — null si es cliente nuevo
   };
 }
 
