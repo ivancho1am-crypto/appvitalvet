@@ -174,6 +174,68 @@ function rDashboard() {
   // render ni el arranque. Solo avisa si algo quedó sin llegar a las tablas;
   // reparar siempre lo decide la persona. Ver js/espejo-verificar.js.
   if (typeof espejoChequeoSilencioso === 'function') espejoChequeoSilencioso();
+
+  // Finanzas/Ventas: necesitan Supabase (viven ahí, no en vv_store), así
+  // que no pueden ser parte del render síncrono de arriba. Desprendido a
+  // propósito (sin await) — si tarda o falla, el resto de Inicio ya se vio.
+  _rFinanzasResumen();
+}
+
+// Widget "💰 Finanzas y Ventas — este mes" (2026-10-07): reemplaza el
+// antiguo "Próximamente" — Finanzas y Ventas ya existen y están
+// organizados, así que acá se muestran sus números reales en vez de un
+// aviso de módulo futuro.
+//
+// Reusa EXACTAMENTE el mismo cálculo que ya usa la pantalla de Finanzas
+// (rFinanzas en finanzas-ui.js): preferir finanzas_resumen_mensual ya
+// agregada en Supabase, y si ese mes todavía no tiene fila (o falla),
+// sumar factura por factura — nunca se inventa un número nuevo acá.
+// "Ingresos" sigue siendo el mismo combinado de siempre: Cobrado
+// (facturas) + Ventas directas (mostrador/servicios, que se registran ya
+// cobradas) — sumado solo para esta vista, nunca guardado así en Supabase.
+async function _rFinanzasResumen() {
+  const el = document.getElementById('dash-fin-resumen'); if (!el) return;
+  if (typeof FinanzasRepo === 'undefined' || typeof finRangoMes !== 'function') return;   // módulo no cargado todavía
+
+  try {
+    const { desde, hasta } = finRangoMes();
+    const desdeFecha = `${desde.getFullYear()}-${String(desde.getMonth() + 1).padStart(2, '0')}-${String(desde.getDate()).padStart(2, '0')}`;
+    const hastaFecha = `${hasta.getFullYear()}-${String(hasta.getMonth() + 1).padStart(2, '0')}-${String(hasta.getDate()).padStart(2, '0')}`;
+
+    const [resumenFacturas, gastos, ventas] = await Promise.all([
+      FinanzasRepo.resumenFacturasEnRango(desdeFecha, hastaFecha),
+      FinanzasRepo.listarGastos(desdeFecha, hastaFecha),
+      typeof VentasRepo !== 'undefined' ? VentasRepo.listarVentas(desdeFecha, hastaFecha) : Promise.resolve([]),
+    ]);
+
+    let resumen = null;
+    try {
+      const filaMes = await FinanzasRepo.resumenMensual(finPrimerDiaMes());
+      if (filaMes) {
+        resumen = {
+          cobrado:   parseFloat(filaMes.cobrado) || 0,
+          gastos:    parseFloat(filaMes.gastos) || 0,
+        };
+      }
+    } catch (e) { console.warn('[dashboard] resumenMensual:', e); }
+    if (!resumen) resumen = { cobrado: finSumarResumenFacturas(resumenFacturas).cobrado, gastos: finSumarGastos(gastos) };
+
+    const ventasActivas = (ventas || []).filter(v => !v.anulado);
+    const ventasDirectas = finSumarVentasDirectas(ventas || []);
+    const ingresos = resumen.cobrado + ventasDirectas;
+    const balance = ingresos - resumen.gastos;
+
+    el.innerHTML = `
+      <div class="mini-stat-row">
+        <div class="mini-stat"><div class="ms-val" style="color:var(--green)">${fmt$(ingresos)}</div><div class="ms-lbl">Ingresos</div></div>
+        <div class="mini-stat"><div class="ms-val">${fmt$(resumen.gastos)}</div><div class="ms-lbl">Gastos</div></div>
+        <div class="mini-stat"><div class="ms-val" style="color:${balance >= 0 ? 'var(--green)' : '#ef5350'}">${fmt$(balance)}</div><div class="ms-lbl">Balance</div></div>
+      </div>
+      <div style="font-size:11px;color:var(--ink-2);text-align:center">🛒 ${ventasActivas.length} venta${ventasActivas.length === 1 ? '' : 's'} · ${fmt$(ventasDirectas)}</div>`;
+  } catch (e) {
+    console.warn('[dashboard] _rFinanzasResumen:', e);
+    el.innerHTML = '<div class="empty-state" style="padding:16px"><div class="empty-s">No se pudo cargar — revisá tu conexión</div></div>';
+  }
 }
 
 // ── Sidebar: colapsar/expandir (desktop) y drawer (móvil) ─────────────────

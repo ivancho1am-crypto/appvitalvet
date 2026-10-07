@@ -273,10 +273,14 @@ try { if(Object.keys(localStorage).some(k=>k.startsWith('sb-')&&k.includes('auth
             <button class="qa-btn" onclick="openHistModal()"><div class="qa-ic">📋</div><div class="qa-lbl">Nueva historia</div></button>
             <button class="qa-btn" onclick="openM('m-seg')"><div class="qa-ic">🏥</div><div class="qa-lbl">Nuevo seguimiento</div></button>
           </div>
-          <div class="kpi-card kpi-finance">
-            <div class="kc-lbl">💰 Gestión financiera</div>
-            <div class="kc-val">Próximamente</div>
-            <div class="kc-soon">Módulo futuro</div>
+          <div class="widget-card">
+            <div class="widget-hdr">
+              <div class="widget-title">💰 Finanzas y Ventas — este mes</div>
+              <button class="widget-link" onclick="go('finanzas',document.querySelector('.sidebar-item[onclick*=finanzas]'))">Ver todo →</button>
+            </div>
+            <div class="widget-body" id="dash-fin-resumen">
+              <div class="empty-state" style="padding:16px"><div class="empty-s">Cargando…</div></div>
+            </div>
           </div>
         </div>
 
